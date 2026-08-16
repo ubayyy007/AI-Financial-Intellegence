@@ -1,0 +1,79 @@
+/* App.css — Clean slate. All global styles moved to index.css */
+/* Only component-specific micro-interactions and animations live here */
+
+/* Fade-in page transition */
+.page-fade {
+  animation: pageFadeIn 0.35s ease forwards;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Number counter shimmer for scorecards */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.shimmer-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.1) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* Table row entrance */
+@keyframes rowSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+tbody tr {
+  animation: rowSlideIn 0.2s ease both;
+}
+
+tbody tr:nth-child(1)  { animation-delay: 0.02s; }
+tbody tr:nth-child(2)  { animation-delay: 0.04s; }
+tbody tr:nth-child(3)  { animation-delay: 0.06s; }
+tbody tr:nth-child(4)  { animation-delay: 0.08s; }
+tbody tr:nth-child(5)  { animation-delay: 0.10s; }
+tbody tr:nth-child(6)  { animation-delay: 0.12s; }
+tbody tr:nth-child(7)  { animation-delay: 0.14s; }
+tbody tr:nth-child(8)  { animation-delay: 0.16s; }
+tbody tr:nth-child(9)  { animation-delay: 0.18s; }
+tbody tr:nth-child(10) { animation-delay: 0.20s; }
+
+/* Card entrance */
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: cardEntrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
