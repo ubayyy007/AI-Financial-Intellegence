@@ -56,24 +56,7 @@ export default function ApiKeyInput({ onKeyChange }) {
       >
         <Key size={13} />
         <span>Pengaturan API untuk membaca PDF</span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            marginRight: '0.25rem',
-            fontSize: '0.68rem',
-            fontWeight: 600,
-            padding: '0.15rem 0.5rem',
-            borderRadius: '999px',
-            backgroundColor: hasKey
-              ? 'rgba(52,211,153,0.12)'
-              : 'rgba(248,113,113,0.12)',
-            color: hasKey ? 'var(--success)' : 'var(--danger)',
-            border: `1px solid ${hasKey ? 'var(--success)' : 'var(--danger)'}28`,
-          }}
-        >
-          {hasKey ? 'API key aktif' : 'Belum diatur'}
-        </span>
-        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        {expanded ? <ChevronUp size={13} style={{ marginLeft: 'auto' }} /> : <ChevronDown size={13} style={{ marginLeft: 'auto' }} />}
       </button>
 
       {/* Expanded form */}
