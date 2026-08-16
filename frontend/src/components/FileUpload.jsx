@@ -1,10 +1,7 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, FileType, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { parseFile } from '../utils/parser';
-import ApiKeyInput from './ApiKeyInput';
 import { downloadPersonalTemplate, downloadUMKMTemplate } from '../utils/templateGenerator';
-
-const IS_PROD = import.meta.env.PROD;
 
 export default function FileUpload({ onDataParsed }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -12,8 +9,7 @@ export default function FileUpload({ onDataParsed }) {
   const [status, setStatus] = useState('idle'); // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState('');
   const [processingMessage, setProcessingMessage] = useState('Mengekstrak data...');
-  const [, forceUpdate] = useState(0); // re-render when API key changes
-  const fileInputRef = useRef(null);
+const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -179,10 +175,7 @@ export default function FileUpload({ onDataParsed }) {
         </div>
       </div>
 
-      {/* API key input — only shown in dev mode */}
-      {!IS_PROD && <ApiKeyInput onKeyChange={() => forceUpdate((n) => n + 1)} />}
-
-      <style>{`
+<style>{`
         @keyframes spin {
           100% { transform: rotate(360deg); }
         }
