@@ -419,6 +419,7 @@ const parseSheetTransactions = (sheet, sheetName) => {
 
 const parseExcelSmart = (workbook) => {
   const allTransactions = [];
+  const sheetsRead = []; // { name, count } per sheet that yielded transactions
 
   for (const sheetName of workbook.SheetNames) {
     const nameLower = sheetName.toLowerCase();
@@ -427,7 +428,10 @@ const parseExcelSmart = (workbook) => {
     const sheet = workbook.Sheets[sheetName];
     try {
       const txs = parseSheetTransactions(sheet, sheetName);
-      allTransactions.push(...txs);
+      if (txs.length > 0) {
+        allTransactions.push(...txs);
+        sheetsRead.push({ name: sheetName, count: txs.length });
+      }
     } catch { /* ignore unparseable sheets */ }
   }
 
@@ -438,7 +442,7 @@ const parseExcelSmart = (workbook) => {
     );
   }
 
-  return allTransactions;
+  return { transactions: allTransactions, sheetsRead };
 };
 
 // ─── CSV Parser ────────────────────────────────────────────────────────────────
@@ -557,19 +561,23 @@ export const parseFile = async (file, options = {}) => {
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
 
     try {
-      const transactions = parseExcelSmart(workbook);
+      const { transactions, sheetsRead } = parseExcelSmart(workbook);
       if (transactions.length > 0) {
-        return { transactions, confidence: computeRuleBasedConfidence(transactions) };
+        return {
+          transactions,
+          confidence: computeRuleBasedConfidence(transactions),
+          meta: { sheetsRead },
+        };
       }
     } catch { /* lanjut ke AI */ }
 
     // Fallback: dump all non-skip sheets to CSV for AI parsing
-    const allCsv = workbook.SheetNames
-      .filter(n => !SKIP_SHEET_NAMES.some(kw => n.toLowerCase().includes(kw)))
-      .map(n => XLSX.utils.sheet_to_csv(workbook.Sheets[n]))
-      .join('\n');
+    const dataSheetNames = workbook.SheetNames
+      .filter(n => !SKIP_SHEET_NAMES.some(kw => n.toLowerCase().includes(kw)));
+    const allCsv = dataSheetNames.map(n => XLSX.utils.sheet_to_csv(workbook.Sheets[n])).join('\n');
     if (!allCsv.trim()) throw new Error('Tidak ada sheet yang dapat dibaca dalam file Excel ini.');
-    return parseTextWithAI(allCsv, file.name, onProgress);
+    const aiResult = await parseTextWithAI(allCsv, file.name, onProgress);
+    return { ...aiResult, meta: { sheetsRead: dataSheetNames.map(name => ({ name, count: null })) } };
   }
 
   throw new Error('Format tidak didukung. Upload file CSV, Excel (.xlsx / .xls), atau PDF.');

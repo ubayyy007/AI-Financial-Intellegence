@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Bot, Cpu, PlusCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Bot, Cpu, PlusCircle, Layers } from 'lucide-react';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -10,7 +10,8 @@ const LEVEL_CONFIG = {
 };
 
 export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, hasPreviousData }) {
-  const { transactions, confidence } = result;
+  const { transactions, confidence, meta } = result;
+  const sheetsRead = meta?.sheetsRead ?? [];
   const { score, level, method, warnings, flaggedIds } = confidence;
   const cfg = LEVEL_CONFIG[level] || LEVEL_CONFIG.medium;
   const flaggedSet = new Set(flaggedIds);
@@ -86,6 +87,39 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
           </div>
         </div>
       </div>
+
+      {/* ── Sheet Indicator ───────────────────────────────────────── */}
+      {sheetsRead.length > 0 && (
+        <div style={{
+          padding: '0.75rem 1rem',
+          background: 'rgba(99,102,241,0.07)',
+          border: '1px solid rgba(99,102,241,0.2)',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', color: '#818cf8', fontWeight: 600, fontSize: '0.8125rem' }}>
+            <Layers size={14} />
+            {sheetsRead.length} sheet berhasil digabungkan
+          </div>
+          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+            {sheetsRead.map(({ name, count }) => (
+              <span key={name} style={{
+                fontSize: '0.72rem', fontWeight: 500,
+                padding: '0.2rem 0.6rem', borderRadius: '999px',
+                background: 'rgba(99,102,241,0.12)',
+                border: '1px solid rgba(99,102,241,0.25)',
+                color: '#a5b4fc',
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              }}>
+                {name}
+                {count !== null && (
+                  <span style={{ opacity: 0.65 }}>· {count} baris</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Warnings ──────────────────────────────────────────────── */}
       {warnings.length > 0 && (
