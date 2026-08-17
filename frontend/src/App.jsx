@@ -17,41 +17,93 @@ import { buildPeriods, computeForecast } from './utils/multiPeriodEngine';
 // ─── Mode Toggle ──────────────────────────────────────────────────────────────
 
 const MODES = [
-  { value: 'personal', tKey: 'mode_personal', Icon: User        },
-  { value: 'mikro',    tKey: 'mode_warung',   Icon: ShoppingBag },
-  { value: 'business', tKey: 'mode_business', Icon: Store       },
+  {
+    value: 'personal', tKey: 'mode_personal', Icon: User,
+    tooltipTitle: 'Mode Personal',
+    tooltipLines: ['Untuk individu yang ingin memantau', 'keuangan pribadi: gaji, pengeluaran,', 'tabungan, dan cicilan.'],
+  },
+  {
+    value: 'mikro', tKey: 'mode_warung', Icon: ShoppingBag,
+    tooltipTitle: 'Mode UMKM',
+    tooltipLines: ['Untuk warung, toko, atau usaha', 'rumahan yang butuh laporan', 'penjualan dan stok sederhana.'],
+  },
+  {
+    value: 'business', tKey: 'mode_business', Icon: Store,
+    tooltipTitle: 'Mode Bisnis Enterprise',
+    tooltipLines: ['Untuk bisnis terstruktur dengan', 'karyawan, invoice B2B, aset,', 'dan akuntansi formal.'],
+  },
 ];
 
-const ModeToggle = ({ mode, onChange, t }) => (
-  <div style={{
-    display: 'inline-flex', borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--border)',
-    overflow: 'hidden', background: 'var(--bg-secondary)',
-  }}>
-    {MODES.map(({ value, tKey, Icon }) => {
-      const active = mode === value;
-      return (
-        <button
-          key={value}
-          onClick={() => onChange(value)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.35rem',
-            padding: '0.4rem 0.875rem',
-            border: 'none', cursor: 'pointer',
-            fontSize: '0.8125rem', fontWeight: active ? 500 : 400,
-            background: active ? 'var(--primary)' : 'transparent',
-            color: active ? '#fff' : 'var(--text-muted)',
-            transition: 'all 0.15s',
-            letterSpacing: '0.01em',
-          }}
-        >
-          <Icon size={12} />
-          {t(tKey)}
-        </button>
-      );
-    })}
-  </div>
-);
+const ModeToggle = ({ mode, onChange, t }) => {
+  const [hoveredMode, setHoveredMode] = useState(null);
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <div style={{
+        display: 'inline-flex', borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border)',
+        overflow: 'hidden', background: 'var(--bg-secondary)',
+      }}>
+        {MODES.map(({ value, tKey, Icon, tooltipTitle, tooltipLines }) => {
+          const active = mode === value;
+          return (
+            <div key={value} style={{ position: 'relative' }}>
+              <button
+                onClick={() => onChange(value)}
+                onMouseEnter={() => setHoveredMode(value)}
+                onMouseLeave={() => setHoveredMode(null)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  padding: '0.4rem 0.875rem',
+                  border: 'none', cursor: 'pointer',
+                  fontSize: '0.8125rem', fontWeight: active ? 500 : 400,
+                  background: active ? 'var(--primary)' : 'transparent',
+                  color: active ? '#fff' : 'var(--text-muted)',
+                  transition: 'all 0.15s',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <Icon size={12} />
+                {t(tKey)}
+              </button>
+              {hoveredMode === value && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.5rem 0.75rem',
+                  minWidth: 180, maxWidth: 220,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                  zIndex: 100,
+                  pointerEvents: 'none',
+                }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>
+                    {tooltipTitle}
+                  </div>
+                  {tooltipLines.map((line, i) => (
+                    <div key={i} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      {line}
+                    </div>
+                  ))}
+                  {/* Arrow */}
+                  <div style={{
+                    position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                    width: 8, height: 8,
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderTop: 'none', borderLeft: 'none',
+                  }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 

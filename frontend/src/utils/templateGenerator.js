@@ -7,7 +7,7 @@ const fmtDate = (y, m, d) =>
 
 // ─── Demo Personal Finance (3 bulan: Jan–Mar 2024) ─────────────────────────────
 
-export const downloadDemoPersonal = () => {
+const buildPersonalWorkbook = () => {
   const wb = XLSX.utils.book_new();
 
   const months = [
@@ -54,12 +54,19 @@ export const downloadDemoPersonal = () => {
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
 
-  XLSX.writeFile(wb, 'Demo_Personal_Finance.xlsx');
+  return wb;
+};
+
+export const downloadDemoPersonal = () => XLSX.writeFile(buildPersonalWorkbook(), 'Demo_Personal_Finance.xlsx');
+
+export const generateDemoPersonalFile = () => {
+  const buf = XLSX.write(buildPersonalWorkbook(), { bookType: 'xlsx', type: 'array' });
+  return new File([buf], 'Demo_Personal_Finance.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
 // ─── Demo Toko / Warung (3 bulan: Jan–Mar 2024) ────────────────────────────────
 
-export const downloadDemoWarung = () => {
+const buildWarungWorkbook = () => {
   const wb = XLSX.utils.book_new();
 
   const months = [
@@ -114,12 +121,19 @@ export const downloadDemoWarung = () => {
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
 
-  XLSX.writeFile(wb, 'Demo_Toko_Warung.xlsx');
+  return wb;
+};
+
+export const downloadDemoWarung = () => XLSX.writeFile(buildWarungWorkbook(), 'Demo_Toko_Warung.xlsx');
+
+export const generateDemoWarungFile = () => {
+  const buf = XLSX.write(buildWarungWorkbook(), { bookType: 'xlsx', type: 'array' });
+  return new File([buf], 'Demo_Toko_Warung.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
 // ─── Demo Bisnis UMKM (3 bulan: Jan–Mar 2024) ──────────────────────────────────
 
-export const downloadDemoUMKM = () => {
+const buildUMKMWorkbook = () => {
   const wb = XLSX.utils.book_new();
 
   const months = [
@@ -168,7 +182,14 @@ export const downloadDemoUMKM = () => {
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
 
-  XLSX.writeFile(wb, 'Demo_Bisnis_UMKM.xlsx');
+  return wb;
+};
+
+export const downloadDemoUMKM = () => XLSX.writeFile(buildUMKMWorkbook(), 'Demo_Bisnis_UMKM.xlsx');
+
+export const generateDemoUMKMFile = () => {
+  const buf = XLSX.write(buildUMKMWorkbook(), { bookType: 'xlsx', type: 'array' });
+  return new File([buf], 'Demo_Bisnis_UMKM.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
 const today = () => {

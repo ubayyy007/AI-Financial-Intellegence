@@ -4,23 +4,25 @@ import { parseFile } from '../utils/parser';
 import {
   downloadPersonalTemplate, downloadUMKMTemplate,
   downloadDemoPersonal, downloadDemoWarung, downloadDemoUMKM,
+  generateDemoPersonalFile, generateDemoWarungFile, generateDemoUMKMFile,
 } from '../utils/templateGenerator';
 import { useApp } from '../context/AppContext';
 
 const DEMO_KEYS = ['personal', 'warung', 'umkm'];
-const DEMO_FNS  = { personal: downloadDemoPersonal, warung: downloadDemoWarung, umkm: downloadDemoUMKM };
-const DEMO_DESC = { personal: 'demo_personal_desc', warung: 'demo_warung_desc', umkm: 'demo_umkm_desc' };
-const DEMO_LABELS = { personal: 'mode_personal', warung: 'mode_warung', umkm: 'mode_business' };
+const DEMO_FNS      = { personal: downloadDemoPersonal,    warung: downloadDemoWarung,    umkm: downloadDemoUMKM };
+const DEMO_GEN_FNS  = { personal: generateDemoPersonalFile, warung: generateDemoWarungFile, umkm: generateDemoUMKMFile };
+const DEMO_DESC     = { personal: 'demo_personal_desc', warung: 'demo_warung_desc', umkm: 'demo_umkm_desc' };
+const DEMO_LABELS   = { personal: 'mode_personal', warung: 'mode_warung', umkm: 'mode_business' };
 
 export default function FileUpload({ onDataParsed }) {
   const { t } = useApp();
   const [isDragging, setIsDragging]         = useState(false);
-  const [demoTab, setDemoTab]               = useState('personal');
   const [file, setFile]                     = useState(null);
   const [status, setStatus]                 = useState('idle');
   const [errorMessage, setErrorMessage]     = useState('');
   const [processingMessage, setProcessingMessage] = useState('');
-  const fileInputRef = useRef(null);
+  const fileInputRef   = useRef(null);
+  const demoDragKeyRef = useRef(null);
 
   const processFile = async (selectedFile) => {
     if (!selectedFile) return;
@@ -42,8 +44,15 @@ export default function FileUpload({ onDataParsed }) {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files?.length > 0) processFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files?.length > 0) {
+      processFile(e.dataTransfer.files[0]);
+    } else if (demoDragKeyRef.current) {
+      processFile(DEMO_GEN_FNS[demoDragKeyRef.current]());
+    }
+    demoDragKeyRef.current = null;
   };
+
+  const loadDemoDirectly = (key) => processFile(DEMO_GEN_FNS[key]());
 
   const sectionStyle = {
     marginTop: '1rem',
@@ -153,45 +162,63 @@ export default function FileUpload({ onDataParsed }) {
 
       {/* ── Demo files ────────────────────────────────────────────── */}
       <div style={{ ...sectionStyle, marginTop: '0.625rem' }}>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.625rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
           <FlaskConical size={12} />
           {t('upload_demo_hint')}
         </p>
 
-        {/* Tab selector */}
-        <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.625rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+        {/* Demo cards — draggable to dropzone */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {DEMO_KEYS.map((key) => (
-            <button
+            <div
               key={key}
-              onClick={(e) => { e.stopPropagation(); setDemoTab(key); }}
+              draggable
+              onDragStart={(e) => {
+                demoDragKeyRef.current = key;
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('text/plain', key);
+              }}
+              onDragEnd={() => { demoDragKeyRef.current = null; }}
               style={{
-                padding: '0.2rem 0.6rem',
-                fontSize: '0.6875rem', fontWeight: demoTab === key ? 500 : 400,
-                borderRadius: '6px', border: 'none', cursor: 'pointer',
-                background: demoTab === key ? 'var(--primary)' : 'transparent',
-                color: demoTab === key ? '#fff' : 'var(--text-muted)',
-                transition: 'all 0.15s', letterSpacing: '0.01em',
+                flex: '1 1 160px',
+                padding: '0.625rem 0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-card)',
+                cursor: 'grab',
+                userSelect: 'none',
               }}
             >
-              {t(DEMO_LABELS[key])}
-            </button>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                {t(DEMO_LABELS[key])}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: '0.5rem' }}>
+                {t(DEMO_DESC[key])}
+              </div>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.65rem', padding: '0.25rem 0.5rem', flex: 1 }}
+                  onClick={(e) => { e.stopPropagation(); loadDemoDirectly(key); }}
+                >
+                  ▶ Muat Langsung
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.65rem', padding: '0.25rem 0.5rem' }}
+                  onClick={(e) => { e.stopPropagation(); DEMO_FNS[key](); }}
+                  title="Download file"
+                >
+                  <Download size={11} />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Tab content */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
-            {t(DEMO_DESC[demoTab])}
-          </p>
-          <button
-            className="btn btn-ghost"
-            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', flexShrink: 0 }}
-            onClick={(e) => { e.stopPropagation(); DEMO_FNS[demoTab](); }}
-          >
-            <Download size={12} />
-            {t('upload_demo_btn')}
-          </button>
-        </div>
+        <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '0.5rem', opacity: 0.7 }}>
+          Drag kartu demo ke dropzone di atas, atau klik "Muat Langsung"
+        </p>
       </div>
 
       <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
