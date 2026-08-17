@@ -1,15 +1,17 @@
 import { AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Bot, Cpu, PlusCircle, Layers } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 
 const LEVEL_CONFIG = {
-  high:   { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   border: 'rgba(34,197,94,0.3)',   label: 'Tinggi',  Icon: CheckCircle },
-  medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)',  label: 'Sedang',  Icon: AlertTriangle },
-  low:    { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',   label: 'Rendah',  Icon: AlertTriangle },
+  high:   { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   border: 'rgba(34,197,94,0.3)',   tk: 'cr_confidence_high', Icon: CheckCircle },
+  medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)',  tk: 'cr_confidence_med',  Icon: AlertTriangle },
+  low:    { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',   tk: 'cr_confidence_low',  Icon: AlertTriangle },
 };
 
 export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, hasPreviousData }) {
+  const { t } = useApp();
   const { transactions, confidence, meta } = result;
   const sheetsRead = meta?.sheetsRead ?? [];
   const { score, level, method, warnings, flaggedIds } = confidence;
@@ -23,9 +25,9 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
       {/* ── Header ────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <div>
-          <h2 className="card-title">Hasil Ekstraksi</h2>
+          <h2 className="card-title">{t('cr_title')}</h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Verifikasi data sebelum generate laporan keuangan.
+            {t('cr_sub')}
           </p>
         </div>
         <span style={{
@@ -69,20 +71,20 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
             <cfg.Icon size={16} color={cfg.color} />
             <span style={{ fontSize: '1rem', fontWeight: 700, color: cfg.color }}>
-              Kepercayaan {cfg.label}
+              {t(cfg.tk)}
             </span>
           </div>
           <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{transactions.length}</span> transaksi diekstrak
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{transactions.length}</span> {t('cr_tx_extracted')}
             </span>
             {flaggedCount > 0 && (
               <span style={{ fontSize: '0.8125rem', color: '#f59e0b' }}>
-                <span style={{ fontWeight: 600 }}>{flaggedCount}</span> perlu diverifikasi
+                <span style={{ fontWeight: 600 }}>{flaggedCount}</span> {t('cr_need_verify')}
               </span>
             )}
             {flaggedCount === 0 && (
-              <span style={{ fontSize: '0.8125rem', color: '#22c55e' }}>Semua transaksi terlihat valid</span>
+              <span style={{ fontSize: '0.8125rem', color: '#22c55e' }}>{t('cr_all_valid')}</span>
             )}
           </div>
         </div>
@@ -99,7 +101,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', color: '#818cf8', fontWeight: 600, fontSize: '0.8125rem' }}>
             <Layers size={14} />
-            {sheetsRead.length} sheet berhasil digabungkan
+            {sheetsRead.length} {t('cr_sheets_merged')}
           </div>
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
             {sheetsRead.map(({ name, count }) => (
@@ -132,7 +134,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', color: '#f59e0b', fontWeight: 600, fontSize: '0.8125rem' }}>
             <AlertTriangle size={14} />
-            Peringatan ({warnings.length})
+            {t('cr_warnings')} ({warnings.length})
           </div>
           <ul style={{ margin: 0, paddingLeft: '1.1rem', listStyle: 'disc' }}>
             {warnings.map((w, i) => (
@@ -146,11 +148,11 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
       <div style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.625rem' }}>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Preview Transaksi
+            {t('cr_preview')}
           </span>
           {transactions.length > 80 && (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Menampilkan 80 dari {transactions.length} transaksi
+              {t('cr_showing')} 80 {t('cr_of')} {transactions.length}
             </span>
           )}
         </div>
@@ -159,11 +161,11 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
             <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr>
                 <th style={{ width: 24 }}></th>
-                <th>Tanggal</th>
-                <th>Keterangan</th>
-                <th>Kategori</th>
-                <th>Nominal</th>
-                <th>Tipe</th>
+                <th>{t('cr_col_date')}</th>
+                <th>{t('cr_col_desc')}</th>
+                <th>{t('cr_col_cat')}</th>
+                <th>{t('cr_col_amount')}</th>
+                <th>{t('cr_col_type')}</th>
               </tr>
             </thead>
             <tbody>
@@ -197,13 +199,13 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <button className="btn btn-ghost" onClick={onReset} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <RefreshCw size={14} />
-          Upload Ulang
+          {t('cr_btn_reset')}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
           {level === 'low' && (
             <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
-              Kepercayaan rendah — disarankan verifikasi dulu
+              {t('cr_low_warning')}
             </span>
           )}
           {hasPreviousData && onMerge && (
@@ -213,7 +215,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderColor: '#818cf8', color: '#818cf8' }}
             >
               <PlusCircle size={14} />
-              Tambahkan ke Periode
+              {t('cr_btn_merge')}
             </button>
           )}
           <button
@@ -221,7 +223,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
             onClick={onConfirm}
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            {hasPreviousData ? 'Ganti Semua Data' : 'Lanjutkan ke Generate Laporan'}
+            {hasPreviousData ? t('cr_btn_replace') : t('cr_btn_confirm')}
             <ArrowRight size={15} />
           </button>
         </div>

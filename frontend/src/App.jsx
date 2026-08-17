@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import './App.css';
 import LandingPage from './components/LandingPage';
-import { Check, User, Store, ShoppingBag } from 'lucide-react';
+import { Check, User, Store, ShoppingBag, Moon, Sun, Languages } from 'lucide-react';
+import { useApp } from './context/AppContext';
 import FileUpload from './components/FileUpload';
 import ConfidenceReview from './components/ConfidenceReview';
 import FinancialStatements from './components/FinancialStatements';
@@ -16,35 +17,36 @@ import { buildPeriods, computeForecast } from './utils/multiPeriodEngine';
 // ─── Mode Toggle ──────────────────────────────────────────────────────────────
 
 const MODES = [
-  { value: 'personal', label: 'Personal',    Icon: User        },
-  { value: 'mikro',    label: 'Toko/Warung', Icon: ShoppingBag },
-  { value: 'business', label: 'Bisnis/UMKM', Icon: Store       },
+  { value: 'personal', tKey: 'mode_personal', Icon: User        },
+  { value: 'mikro',    tKey: 'mode_warung',   Icon: ShoppingBag },
+  { value: 'business', tKey: 'mode_business', Icon: Store       },
 ];
 
-const ModeToggle = ({ mode, onChange }) => (
+const ModeToggle = ({ mode, onChange, t }) => (
   <div style={{
-    display: 'inline-flex', borderRadius: '8px',
+    display: 'inline-flex', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--border)',
     overflow: 'hidden', background: 'var(--bg-secondary)',
   }}>
-    {MODES.map(({ value, label, Icon }) => {
+    {MODES.map(({ value, tKey, Icon }) => {
       const active = mode === value;
       return (
         <button
           key={value}
           onClick={() => onChange(value)}
           style={{
-            display: 'flex', alignItems: 'center', gap: '0.375rem',
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
             padding: '0.4rem 0.875rem',
             border: 'none', cursor: 'pointer',
-            fontSize: '0.8125rem', fontWeight: active ? 600 : 400,
+            fontSize: '0.8125rem', fontWeight: active ? 500 : 400,
             background: active ? 'var(--primary)' : 'transparent',
             color: active ? '#fff' : 'var(--text-muted)',
             transition: 'all 0.15s',
+            letterSpacing: '0.01em',
           }}
         >
-          <Icon size={13} />
-          {label}
+          <Icon size={12} />
+          {t(tKey)}
         </button>
       );
     })}
@@ -54,8 +56,9 @@ const ModeToggle = ({ mode, onChange }) => (
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 function App() {
+  const { t, lang, setLang, theme, setTheme } = useApp();
   const [showLanding, setShowLanding] = useState(true);
-  const [mode, setMode] = useState('business'); // 'personal' | 'business'
+  const [mode, setMode] = useState('business');
   const [parsedData, setParsedData] = useState([]);
   const [extractionResult, setExtractionResult] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('data');
@@ -114,43 +117,75 @@ function App() {
     if (stepId === 'data' || hasData) setActiveMainTab(stepId);
   };
 
-  // Step label & number based on mode
   const stepConfig = mode === 'business'
     ? [
-        { id: 'data',       label: 'Upload Data'    },
-        { id: 'statements', label: '3 Statement'     },
-        { id: 'bi',         label: 'BI Insight'      },
-        { id: 'investment', label: 'Skor Investasi'  },
-        { id: 'benchmark',  label: 'Benchmark'       },
-        { id: 'multi',      label: 'Tren & Proyeksi' },
+        { id: 'data',       label: t('step_data')       },
+        { id: 'statements', label: t('step_statements')  },
+        { id: 'bi',         label: t('step_bi')          },
+        { id: 'investment', label: t('step_investment')  },
+        { id: 'benchmark',  label: t('step_benchmark')   },
+        { id: 'multi',      label: t('step_multi')       },
       ]
     : mode === 'mikro'
     ? [
-        { id: 'data',       label: 'Upload Data'    },
-        { id: 'report',     label: 'Laporan Toko'   },
-        { id: 'statements', label: '3 Statement'    },
-        { id: 'multi',      label: 'Tren & Proyeksi' },
+        { id: 'data',       label: t('step_data')           },
+        { id: 'report',     label: t('step_report_warung')  },
+        { id: 'statements', label: t('step_statements')     },
+        { id: 'multi',      label: t('step_multi')          },
       ]
     : [
-        { id: 'data',       label: 'Upload Data'     },
-        { id: 'report',     label: 'Laporan Personal' },
-        { id: 'statements', label: '3 Statement'      },
-        { id: 'multi',      label: 'Tren & Proyeksi'  },
+        { id: 'data',       label: t('step_data')            },
+        { id: 'report',     label: t('step_report_personal') },
+        { id: 'statements', label: t('step_statements')      },
+        { id: 'multi',      label: t('step_multi')           },
       ];
 
-  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} />;
+  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} />
+
+  // ── Shared icon-button style ────────────────────────────────────────────────
+  const iconBtn = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: 34, height: 34, borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--border-strong)',
+    background: 'rgba(255,255,255,0.04)',
+    color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s',
+    flexShrink: 0,
+  };
 
   return (
     <div className="container">
       <header className="header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div>
-            <h1>AI Financial Intelligence</h1>
-            <p>Platform AI elegan untuk mengekstrak insight bisnis dan menyusun laporan standar langsung dari data mentah Anda.</p>
+          <div style={{ textAlign: 'left' }}>
+            <h1>{t('app_title')}</h1>
+            <p style={{ marginTop: '0.375rem' }}>{t('app_desc')}</p>
           </div>
-          <div style={{ paddingTop: '0.25rem', flexShrink: 0 }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.375rem', textAlign: 'right' }}>Mode Analisis</div>
-            <ModeToggle mode={mode} onChange={handleModeChange} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.625rem', paddingTop: '0.25rem', flexShrink: 0 }}>
+            {/* Controls row: lang + theme + mode */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {/* Language toggle */}
+              <button
+                style={iconBtn}
+                onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+                title="Switch language"
+              >
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+                  {lang === 'id' ? 'EN' : 'ID'}
+                </span>
+              </button>
+              {/* Theme toggle */}
+              <button
+                style={iconBtn}
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+              >
+                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textAlign: 'right', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{t('mode_label')}</div>
+              <ModeToggle mode={mode} onChange={handleModeChange} t={t} />
+            </div>
           </div>
         </div>
       </header>
@@ -196,8 +231,8 @@ function App() {
                 <FileUpload onDataParsed={handleDataParsed} />
                 {hasData && (
                   <p style={{ textAlign: 'center', marginTop: '0.875rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                    {parsedData.length} transaksi dimuat ({periods.length} periode).
-                    Upload file baru untuk menambahkan periode atau mengganti data.
+                    {parsedData.length} {t('periods_loaded')} ({periods.length} {t('periods_count')}).{' '}
+                    {t('upload_new_period')}
                   </p>
                 )}
               </>
@@ -276,14 +311,12 @@ function App() {
         {activeMainTab === 'multi' && (
           <div key="multi" className="page-fade">
             <div style={{ marginBottom: '1.25rem' }}>
-              <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.25rem', fontWeight: 700 }}>
-                Tren &amp; Proyeksi Multi-Periode
-              </h2>
+              <h2 style={{ margin: '0 0 0.25rem 0' }}>{t('multi_title')}</h2>
               <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Komparasi antar bulan dan proyeksi arus kas 3 bulan ke depan berbasis tren historis.
+                {t('multi_sub')}
                 {!isMulti && (
-                  <span style={{ color: '#f59e0b', marginLeft: '0.4rem' }}>
-                    Data hanya 1 periode — tambahkan file periode lain untuk komparasi penuh.
+                  <span style={{ color: 'var(--warning)', marginLeft: '0.4rem' }}>
+                    {t('multi_single_warn')}
                   </span>
                 )}
               </p>

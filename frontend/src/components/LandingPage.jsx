@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { useApp } from '../context/AppContext';
 
-// ─── Animated canvas: chart grid + line + candlesticks + money flow ──────────
-
+// ─── Minimal Chart Canvas — very subtle, quiet lines ─────────────────────────
 function ChartCanvas() {
   const canvasRef = useRef(null);
 
@@ -17,164 +17,67 @@ function ChartCanvas() {
     resize();
     window.addEventListener('resize', resize);
 
-    // Smooth price path
-    const N = 120;
-    const prices = Array.from({ length: N }, (_, i) => {
-      return 0;
-    });
-    prices[0] = 50;
-    for (let i = 1; i < N; i++) {
-      prices[i] = Math.max(10, Math.min(90, prices[i - 1] + (Math.random() - 0.46) * 5));
-    }
+    // Generate two smooth price paths
+    const N = 160;
+    const makePath = (start, volatility) => {
+      const pts = [start];
+      for (let i = 1; i < N; i++) {
+        pts[i] = Math.max(8, Math.min(92, pts[i-1] + (Math.random() - 0.48) * volatility));
+      }
+      return pts;
+    };
 
-    // Secondary dim path
-    const prices2 = [45];
-    for (let i = 1; i < N; i++) {
-      prices2[i] = Math.max(5, Math.min(95, prices2[i - 1] + (Math.random() - 0.5) * 4));
-    }
+    const path1 = makePath(42, 4.5);
+    const path2 = makePath(55, 3);
 
-    // Candlestick data
-    const candles = Array.from({ length: 24 }, (_, i) => {
-      const open  = 20 + Math.random() * 60;
-      const close = open + (Math.random() - 0.48) * 12;
-      const high  = Math.max(open, close) + Math.random() * 6;
-      const low   = Math.min(open, close) - Math.random() * 6;
-      return { open, close, high: Math.min(95, high), low: Math.max(5, low), x: i / 23 };
-    });
-
-    // Floating money particles
-    const particles = Array.from({ length: 60 }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      r: Math.random() * 2.5 + 0.5,
-      vx: (Math.random() - 0.5) * 0.0002,
-      vy: -(Math.random() * 0.00035 + 0.00005),
-      alpha: Math.random() * 0.6 + 0.2,
-      color: Math.random() > 0.5 ? '#60a5fa' : '#34d399',
-    }));
-
-    let t = 0;
-    let raf;
+    let frame = 0;
+    let animId;
 
     const draw = () => {
       const W = canvas.width;
       const H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      // ── Grid lines ──────────────────────────────────────────────────────
-      ctx.strokeStyle = 'rgba(59,130,246,0.08)';
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 8; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, H * i / 8);
-        ctx.lineTo(W, H * i / 8);
-        ctx.stroke();
-      }
-      for (let i = 1; i < 12; i++) {
-        ctx.beginPath();
-        ctx.moveTo(W * i / 12, 0);
-        ctx.lineTo(W * i / 12, H);
-        ctx.stroke();
-      }
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const lineAlpha = isDark ? 0.12 : 0.07;
+      const fillAlpha = isDark ? 0.04 : 0.025;
 
-      // ── Candlesticks (right half, faint) ────────────────────────────────
-      const cw = W * 0.025;
-      for (const c of candles) {
-        const cx = W * 0.5 + c.x * W * 0.45;
-        const isUp = c.close >= c.open;
-        const col = isUp ? 'rgba(52,211,153,0.25)' : 'rgba(248,113,113,0.25)';
-        const bodyTop = H * 0.1 + (1 - Math.max(c.open, c.close) / 100) * H * 0.8;
-        const bodyBot = H * 0.1 + (1 - Math.min(c.open, c.close) / 100) * H * 0.8;
-        const wickTop = H * 0.1 + (1 - c.high / 100) * H * 0.8;
-        const wickBot = H * 0.1 + (1 - c.low  / 100) * H * 0.8;
+      // Draw main price line (bottom-third of canvas, scrolling)
+      const drawLine = (path, yOffset, color, alpha, fillCol) => {
+        const segW = W / (N - 1);
+        const startIdx = Math.floor(frame / 1.2) % N;
 
-        // Wick
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(cx, wickTop);
-        ctx.lineTo(cx, wickBot);
+        for (let i = 0; i < N; i++) {
+          const idx = (startIdx + i) % N;
+          const x   = i * segW;
+          const y   = H * yOffset - (path[idx] / 100) * (H * 0.22);
+          if (i === 0) ctx.moveTo(x, y);
+          else         ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = color.replace('ALPHA', alpha);
+        ctx.lineWidth   = 1.2;
         ctx.stroke();
 
-        // Body
-        ctx.fillStyle = col;
-        ctx.fillRect(cx - cw / 2, bodyTop, cw, Math.max(2, bodyBot - bodyTop));
-      }
-
-      // ── Main price line (animated scroll) ───────────────────────────────
-      const scrollOffset = (t * 0.003) % 1;
-
-      // Shadow/glow under line
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const xi = ((i / (N - 1)) + scrollOffset) % 1;
-        const px = xi * W;
-        const py = H * 0.1 + (1 - prices[i] / 100) * H * 0.7;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      // Fill under line
-      ctx.lineTo(W, H);
-      ctx.lineTo(0, H);
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, 'rgba(37,99,235,0.18)');
-      grad.addColorStop(1, 'rgba(37,99,235,0)');
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Main line stroke
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const xi = ((i / (N - 1)) + scrollOffset) % 1;
-        const px = xi * W;
-        const py = H * 0.1 + (1 - prices[i] / 100) * H * 0.7;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#3b82f6';
-      ctx.shadowBlur = 8;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Secondary dim line
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const xi = ((i / (N - 1)) + scrollOffset * 0.7 + 0.3) % 1;
-        const px = xi * W;
-        const py = H * 0.15 + (1 - prices2[i] / 100) * H * 0.65;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.strokeStyle = 'rgba(99,102,241,0.4)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // ── Floating particles ───────────────────────────────────────────────
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
-        if (p.x < 0) p.x = 1;
-        if (p.x > 1) p.x = 0;
-
-        ctx.beginPath();
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color;
-        ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
+        // Fill below
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fillStyle = color.replace('ALPHA', fillAlpha);
         ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      };
 
-      t++;
-      raf = requestAnimationFrame(draw);
+      drawLine(path1, 0.72, 'rgba(74,134,240,ALPHA)', lineAlpha, fillAlpha);
+      drawLine(path2, 0.88, 'rgba(100,116,200,ALPHA)', lineAlpha * 0.55, fillAlpha * 0.5);
+
+      frame++;
+      animId = requestAnimationFrame(draw);
     };
 
     draw();
+
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
     };
   }, []);
@@ -184,332 +87,386 @@ function ChartCanvas() {
       ref={canvasRef}
       style={{
         position: 'fixed', inset: 0, zIndex: 0,
-        pointerEvents: 'none',
-        opacity: 0.75,
+        width: '100%', height: '100%',
+        opacity: 0.65, pointerEvents: 'none',
       }}
     />
   );
 }
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const FEATURES = [
-  { icon: '📊', title: '3 Financial Statements', desc: 'Laba Rugi, Neraca, dan Arus Kas dihasilkan otomatis dari data mentah Anda.', tag: 'Bisnis' },
-  { icon: '🧠', title: 'AI PDF Parser', desc: 'Upload mutasi bank PDF — AI Gemini mengekstrak transaksi tanpa input manual.', tag: 'AI' },
-  { icon: '📈', title: 'BI Insight Dashboard', desc: 'Analisis tren, top kategori, dan rasio keuangan dalam satu tampilan interaktif.', tag: 'Bisnis' },
-  { icon: '🏠', title: 'Personal Finance', desc: '6 framework budgeting: 50/30/20, ZBB, Envelope, dan lainnya.', tag: 'Personal' },
-  { icon: '🏪', title: 'Mode Toko / Warung', desc: 'Laporan sederhana untuk UMKM kecil: omzet, HPP, laba bersih per hari.', tag: 'UMKM' },
-  { icon: '🔮', title: 'Proyeksi Multi-Periode', desc: 'Komparasi antar bulan dan forecast arus kas 3 bulan ke depan.', tag: 'Analitik' },
-];
-
-const tagColors = {
-  AI:       { bg: 'rgba(99,102,241,0.25)',  color: '#a5b4fc', border: 'rgba(99,102,241,0.4)'  },
-  Bisnis:   { bg: 'rgba(37,99,235,0.25)',   color: '#93c5fd', border: 'rgba(37,99,235,0.4)'   },
-  Personal: { bg: 'rgba(16,185,129,0.25)',  color: '#6ee7b7', border: 'rgba(16,185,129,0.4)'  },
-  UMKM:     { bg: 'rgba(245,158,11,0.25)',  color: '#fcd34d', border: 'rgba(245,158,11,0.4)'  },
-  Analitik: { bg: 'rgba(139,92,246,0.25)',  color: '#c4b5fd', border: 'rgba(139,92,246,0.4)'  },
-};
-
-// ─── Glassmorphism style ──────────────────────────────────────────────────────
-
+// ─── Glass style constants ─────────────────────────────────────────────────────
 const glass = {
-  background: 'rgba(255,255,255,0.06)',
+  background: 'rgba(8,10,22,0.55)',
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid rgba(255,255,255,0.15)',
+  border: '1px solid rgba(255,255,255,0.07)',
   borderRadius: '16px',
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 40px rgba(0,0,0,0.5)',
+  boxShadow: '0 8px 40px rgba(0,0,0,0.50)',
 };
 
-const glassStrong = {
-  background: 'rgba(255,255,255,0.08)',
-  backdropFilter: 'blur(24px)',
-  WebkitBackdropFilter: 'blur(24px)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  borderRadius: '20px',
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 16px 60px rgba(0,0,0,0.6)',
+const glassLight = {
+  background: 'rgba(255,253,248,0.70)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid rgba(0,0,0,0.07)',
+  borderRadius: '16px',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
 };
 
-// ─── LandingPage ─────────────────────────────────────────────────────────────
-
+// ─── LandingPage ──────────────────────────────────────────────────────────────
 export default function LandingPage({ onEnter }) {
+  const { t, lang, setLang, theme, setTheme } = useApp();
+  const isDark = theme === 'dark';
+  const g = isDark ? glass : glassLight;
+
+  const textMain  = isDark ? '#eeeef2' : '#10101a';
+  const textMuted = isDark ? '#5a6080' : '#8a8fa8';
+  const textSub   = isDark ? '#888baa' : '#4a4e68';
+  const primary   = isDark ? '#4a86f0' : '#2563eb';
+  const bg        = isDark ? '#06060e' : '#f5f4ef';
+
+  const features = [
+    { icon: '⚡', tk: 'landing_feat_1_title', dk: 'landing_feat_1_desc' },
+    { icon: '📊', tk: 'landing_feat_2_title', dk: 'landing_feat_2_desc' },
+    { icon: '📑', tk: 'landing_feat_3_title', dk: 'landing_feat_3_desc' },
+    { icon: '📈', tk: 'landing_feat_4_title', dk: 'landing_feat_4_desc' },
+    { icon: '🏦', tk: 'landing_feat_5_title', dk: 'landing_feat_5_desc' },
+    { icon: '🔮', tk: 'landing_feat_6_title', dk: 'landing_feat_6_desc' },
+  ];
+
+  const steps = [
+    { num: '01', tk: 'landing_step_1_title', dk: 'landing_step_1_desc' },
+    { num: '02', tk: 'landing_step_2_title', dk: 'landing_step_2_desc' },
+    { num: '03', tk: 'landing_step_3_title', dk: 'landing_step_3_desc' },
+  ];
+
   return (
     <div style={{
-      minHeight: '100vh',
-      background: '#050810',
-      color: '#fff',
-      fontFamily: "'Inter', system-ui, sans-serif",
-      overflowX: 'hidden',
-      position: 'relative',
+      minHeight: '100vh', background: bg,
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+      color: textMain, position: 'relative', overflow: 'hidden',
     }}>
-      {/* Animated chart background */}
       <ChartCanvas />
 
-      {/* Soft color overlay — lighter so chart shows through */}
+      {/* Blue light reflection — top right */}
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none',
-        background: [
-          'radial-gradient(ellipse 70% 50% at 20% 30%, rgba(37,99,235,0.15) 0%, transparent 60%)',
-          'radial-gradient(ellipse 50% 40% at 80% 70%, rgba(99,102,241,0.1) 0%, transparent 60%)',
-          'linear-gradient(to bottom, rgba(5,8,16,0.3) 0%, rgba(5,8,16,0.55) 50%, rgba(5,8,16,0.85) 100%)',
-        ].join(','),
+        position: 'fixed', top: '-20vh', right: '-10vw',
+        width: '55vw', height: '55vw', maxWidth: 700, maxHeight: 700,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle at center, rgba(37,99,235,0.11) 0%, transparent 68%)',
+        filter: 'blur(80px)', zIndex: 0, pointerEvents: 'none',
       }} />
 
-      <div style={{ position: 'relative', zIndex: 2 }}>
-
-        {/* ── Navbar ───────────────────────────────────────────────────── */}
-        <nav style={{
-          maxWidth: 1100, margin: '0 auto',
-          padding: '1.5rem 2rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      {/* ── Navbar ────────────────────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        ...g,
+        borderRadius: 0,
+        borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+        borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+        padding: '0 2rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: 60,
+      }}>
+        <span style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: '1.0625rem', fontWeight: 500,
+          color: textMain, letterSpacing: '-0.01em',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: '10px',
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.1rem',
-              boxShadow: '0 0 20px rgba(37,99,235,0.6)',
-            }}>💹</div>
-            <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-              AI Financial
-            </span>
-          </div>
+          AI Financial Intelligence
+        </span>
 
-          <div style={{ display: 'none', gap: '2rem' }} className="nav-links">
-            {['Fitur', 'Mode', 'Demo'].map(l => (
-              <span key={l} style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}>{l}</span>
-            ))}
-          </div>
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Language toggle */}
+          <button
+            onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+            style={{
+              background: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+              borderRadius: '6px', padding: '0.3rem 0.6rem',
+              color: textMuted, cursor: 'pointer',
+              fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.06em',
+            }}
+          >
+            {lang === 'id' ? 'EN' : 'ID'}
+          </button>
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            style={{
+              background: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+              borderRadius: '6px', padding: '0.3rem 0.55rem',
+              color: textMuted, cursor: 'pointer', fontSize: '0.875rem',
+            }}
+          >
+            {isDark ? '☀' : '☽'}
+          </button>
+          {/* CTA */}
           <button
             onClick={onEnter}
             style={{
-              padding: '0.5rem 1.375rem',
-              borderRadius: '999px',
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              cursor: 'pointer', color: '#fff', fontWeight: 600,
-              fontSize: '0.875rem',
-              boxShadow: '0 0 24px rgba(37,99,235,0.5)',
+              background: primary, color: '#fff',
+              border: 'none', borderRadius: '8px',
+              padding: '0.45rem 1.1rem',
+              fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer',
+              letterSpacing: '0.01em',
             }}
           >
-            Mulai Gratis →
+            {t('landing_nav_enter')}
           </button>
-        </nav>
+        </div>
+      </nav>
 
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <section style={{ textAlign: 'center', padding: '4rem 2rem 3rem', maxWidth: 820, margin: '0 auto' }}>
+      {/* ── Hero ──────────────────────────────────────────────────────────────── */}
+      <section style={{
+        position: 'relative', zIndex: 1,
+        minHeight: '100vh',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '8rem 2rem 6rem',
+        textAlign: 'center',
+      }}>
+        {/* Tag line */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+          padding: '0.3rem 1rem',
+          ...g, borderRadius: '999px',
+          fontSize: '0.6875rem', fontWeight: 500,
+          color: primary, letterSpacing: '0.08em', textTransform: 'uppercase',
+          marginBottom: '2.5rem',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: primary, flexShrink: 0 }} />
+          {t('landing_hero_tag')}
+        </div>
 
-          {/* Badge */}
+        {/* Headline */}
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 'clamp(2.6rem, 7vw, 5.5rem)',
+          fontWeight: 400,
+          lineHeight: 1.1,
+          letterSpacing: '-0.02em',
+          marginBottom: '1.5rem',
+          maxWidth: 800,
+        }}>
+          <span style={{ color: textMain }}>{t('landing_hero_1')}</span>
+          <br />
+          <span style={{
+            background: `linear-gradient(135deg, ${primary} 0%, #7c84d4 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            {t('landing_hero_2')}
+          </span>
+        </h1>
+
+        {/* Sub */}
+        <p style={{
+          fontSize: 'clamp(0.9375rem, 2vw, 1.125rem)',
+          color: textSub, maxWidth: 560, margin: '0 auto 3rem',
+          lineHeight: 1.75, fontWeight: 300, letterSpacing: '0.01em',
+        }}>
+          {t('landing_hero_sub')}
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            onClick={onEnter}
+            style={{
+              background: primary, color: '#fff',
+              border: 'none', borderRadius: '10px',
+              padding: '0.875rem 2rem',
+              fontSize: '0.9375rem', fontWeight: 500, cursor: 'pointer',
+              boxShadow: `0 4px 20px rgba(74,134,240,0.30)`,
+              letterSpacing: '0.01em',
+            }}
+          >
+            {t('landing_cta_primary')}
+          </button>
+          <a
+            href="#how"
+            style={{
+              ...g, borderRadius: '10px',
+              padding: '0.875rem 1.75rem',
+              fontSize: '0.9375rem', color: textSub, cursor: 'pointer',
+              letterSpacing: '0.01em', textDecoration: 'none',
+              display: 'inline-flex', alignItems: 'center',
+            }}
+          >
+            {t('landing_cta_secondary')}
+          </a>
+        </div>
+
+        {/* Stats strip */}
+        <div style={{
+          display: 'flex', gap: '3rem', flexWrap: 'wrap', justifyContent: 'center',
+          marginTop: '5rem',
+        }}>
+          {[
+            { val: '3', label: t('landing_stat_1') },
+            { val: '95%', label: t('landing_stat_2') },
+            { val: '∞', label: t('landing_stat_3') },
+          ].map(({ val, label }) => (
+            <div key={label} style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 'clamp(2rem, 4vw, 2.75rem)',
+                fontWeight: 400, color: textMain, lineHeight: 1,
+              }}>{val}</div>
+              <div style={{ fontSize: '0.75rem', color: textMuted, marginTop: '0.375rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Features ──────────────────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, padding: '6rem 2rem' }}>
+        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+              fontWeight: 400, color: textMain, marginBottom: '1rem',
+              letterSpacing: '-0.01em',
+            }}>{t('landing_feat_title')}</h2>
+            <p style={{ color: textSub, fontSize: '1rem', fontWeight: 300, maxWidth: 480, margin: '0 auto' }}>
+              {t('landing_feat_sub')}
+            </p>
+          </div>
+
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.375rem 1rem', borderRadius: '999px',
-            ...glass,
-            background: 'rgba(37,99,235,0.2)',
-            border: '1px solid rgba(37,99,235,0.45)',
-            fontSize: '0.75rem', color: '#93c5fd', fontWeight: 600,
-            marginBottom: '2rem',
-            letterSpacing: '0.02em',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '1px',
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+            borderRadius: '18px', overflow: 'hidden',
+            border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#60a5fa', display: 'inline-block', boxShadow: '0 0 6px #60a5fa' }} />
-            Powered by Google Gemini AI
-          </div>
-
-          {/* Headline */}
-          <h1 style={{
-            fontSize: 'clamp(2.75rem, 7vw, 5rem)',
-            fontWeight: 900, lineHeight: 0.95,
-            letterSpacing: '-0.045em', margin: '0 0 1.5rem',
-          }}>
-            Keuangan Anda.
-            <br />
-            <span style={{
-              background: 'linear-gradient(100deg, #60a5fa 0%, #3b82f6 30%, #818cf8 60%, #a78bfa 100%)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent', color: 'transparent',
-              filter: 'drop-shadow(0 0 20px rgba(96,165,250,0.4))',
-            }}>
-              Lebih Cerdas.
-            </span>
-          </h1>
-
-          <p style={{
-            fontSize: '1.0625rem', color: 'rgba(255,255,255,0.5)',
-            lineHeight: 1.75, maxWidth: 520, margin: '0 auto 2.5rem',
-          }}>
-            Upload CSV, Excel, atau PDF laporan bank — dapatkan laporan keuangan standar, insight bisnis, dan proyeksi dalam hitungan detik.
-          </p>
-
-          {/* CTA buttons */}
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={onEnter} style={{
-              padding: '0.9rem 2.25rem', borderRadius: '999px',
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              cursor: 'pointer', color: '#fff',
-              fontWeight: 700, fontSize: '0.9375rem',
-              boxShadow: '0 0 40px rgba(37,99,235,0.55), inset 0 1px 0 rgba(255,255,255,0.2)',
-            }}>
-              Coba Sekarang — Gratis
-            </button>
-            <button style={{
-              padding: '0.9rem 2.25rem', borderRadius: '999px',
-              ...glass,
-              cursor: 'pointer', color: 'rgba(255,255,255,0.75)',
-              fontWeight: 600, fontSize: '0.9375rem',
-              border: '1px solid rgba(255,255,255,0.18)',
-            }}>
-              Lihat Demo ↓
-            </button>
-          </div>
-
-          <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.2)', marginTop: '1rem' }}>
-            Tidak perlu daftar · Tidak perlu kartu kredit · Data tidak disimpan di server
-          </p>
-        </section>
-
-        {/* ── Stats strip ───────────────────────────────────────────────── */}
-        <div style={{ maxWidth: 820, margin: '0 auto 5rem', padding: '0 2rem' }}>
-          <div style={{ ...glassStrong, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', textAlign: 'center', padding: '1.75rem 1rem' }}>
-            {[
-              { val: '6+',           label: 'Mode Analisis'       },
-              { val: 'PDF/CSV/XLSX', label: 'Format Didukung'     },
-              { val: '< 30 detik',   label: 'Waktu Pemrosesan'    },
-            ].map(({ val, label }, i) => (
-              <div key={i} style={{ padding: '0.5rem', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#60a5fa', letterSpacing: '-0.02em' }}>{val}</div>
-                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+            {features.map(({ icon, tk, dk }) => (
+              <div
+                key={tk}
+                style={{
+                  padding: '2rem',
+                  background: isDark ? 'rgba(8,10,22,0.75)' : 'rgba(255,253,248,0.75)',
+                  backdropFilter: 'blur(12px)',
+                }}
+              >
+                <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{icon}</div>
+                <div style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: '1.0625rem', fontWeight: 500,
+                  color: textMain, marginBottom: '0.5rem', letterSpacing: '-0.01em',
+                }}>{t(tk)}</div>
+                <p style={{ color: textSub, fontSize: '0.875rem', lineHeight: 1.65, fontWeight: 300, margin: 0 }}>
+                  {t(dk)}
+                </p>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* ── Features grid ─────────────────────────────────────────────── */}
-        <section style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem 6rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <p style={{ fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: '0.625rem' }}>
-              Semua yang Anda butuhkan
-            </p>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.035em', margin: 0 }}>
-              Satu platform, semua mode analisis
-            </h2>
-          </div>
+      {/* ── How It Works ──────────────────────────────────────────────────────── */}
+      <section id="how" style={{ position: 'relative', zIndex: 1, padding: '6rem 2rem' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+            fontWeight: 400, color: textMain, marginBottom: '4rem', letterSpacing: '-0.01em',
+          }}>{t('landing_how_title')}</h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-            {FEATURES.map(({ icon, title, desc, tag }) => {
-              const tc = tagColors[tag] || tagColors.Bisnis;
-              return (
-                <div key={title} style={{
-                  ...glass,
-                  padding: '1.625rem',
-                  transition: 'transform 0.25s, box-shadow 0.25s',
-                  cursor: 'default',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {steps.map(({ num, tk, dk }, i) => (
+              <div
+                key={num}
+                style={{
+                  display: 'flex', gap: '2rem', alignItems: 'flex-start',
+                  textAlign: 'left', position: 'relative', paddingBottom: i < 2 ? '3rem' : 0,
+                }}
+              >
+                {/* Number + vertical line */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: '0.875rem', color: primary, fontWeight: 400,
+                    background: isDark ? 'rgba(74,134,240,0.06)' : 'rgba(37,99,235,0.05)',
+                    flexShrink: 0,
+                  }}>{num}</div>
+                  {i < 2 && (
                     <div style={{
-                      width: 44, height: 44, borderRadius: '12px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.4rem',
-                    }}>{icon}</div>
-                    <span style={{
-                      fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em',
-                      padding: '0.25rem 0.65rem', borderRadius: '999px',
-                      background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`,
-                    }}>{tag}</span>
-                  </div>
-                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '0 0 0.5rem', letterSpacing: '-0.01em' }}>{title}</h3>
-                  <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                      width: 1, flex: 1, minHeight: 40,
+                      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+                      margin: '0.75rem 0',
+                    }} />
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── How it works ─────────────────────────────────────────────── */}
-        <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 2rem 6rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: '0.625rem' }}>
-            Semudah 3 langkah
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.035em', margin: '0 0 3rem' }}>
-            Dari data mentah ke laporan siap pakai
-          </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', overflow: 'hidden' }}>
-            {[
-              { n: '01', emoji: '📂', title: 'Upload File', desc: 'CSV, Excel, atau PDF mutasi bank — drag and drop, langsung diproses.' },
-              { n: '02', emoji: '⚡', title: 'AI Memproses', desc: 'Transaksi diekstrak, dikategorikan, dan divalidasi secara otomatis.' },
-              { n: '03', emoji: '📋', title: 'Dapatkan Insight', desc: 'Laporan keuangan, grafik tren, dan rekomendasi siap dalam detik.' },
-            ].map(({ n, emoji, title, desc }) => (
-              <div key={n} style={{
-                background: 'rgba(5,8,16,0.75)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                padding: '2.25rem 1.75rem',
-              }}>
-                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>{emoji}</div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', letterSpacing: '0.1em', marginBottom: '0.625rem' }}>{n}</div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.5rem' }}>{title}</h3>
-                <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                <div style={{ paddingTop: '0.75rem' }}>
+                  <div style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: '1.125rem', fontWeight: 500,
+                    color: textMain, marginBottom: '0.5rem', letterSpacing: '-0.01em',
+                  }}>{t(tk)}</div>
+                  <p style={{ color: textSub, fontSize: '0.9rem', fontWeight: 300, lineHeight: 1.7, margin: 0 }}>
+                    {t(dk)}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ── CTA ──────────────────────────────────────────────────────── */}
-        <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 2rem 8rem', textAlign: 'center' }}>
-          <div style={{ ...glassStrong, padding: '3.5rem 2.5rem', position: 'relative', overflow: 'hidden' }}>
-            {/* Top glow line */}
-            <div style={{
-              position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-              width: '60%', height: '1px',
-              background: 'linear-gradient(to right, transparent, rgba(96,165,250,0.8), transparent)',
-            }} />
-            {/* Radial glow */}
-            <div style={{
-              position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
-              width: 300, height: 300, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)',
-              pointerEvents: 'none',
-            }} />
-
-            <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', fontWeight: 800, letterSpacing: '-0.035em', margin: '0 0 1rem', position: 'relative' }}>
-              Siap analisis keuangan Anda?
-            </h2>
-            <p style={{ fontSize: '0.9375rem', color: 'rgba(255,255,255,0.45)', margin: '0 0 2rem', lineHeight: 1.7, position: 'relative' }}>
-              Tidak perlu install. Tidak perlu daftar.<br />Langsung upload dan lihat hasilnya.
-            </p>
-            <button onClick={onEnter} style={{
-              padding: '1rem 2.75rem', borderRadius: '999px',
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              border: '1px solid rgba(255,255,255,0.25)',
-              cursor: 'pointer', color: '#fff',
-              fontWeight: 700, fontSize: '1rem',
-              boxShadow: '0 0 48px rgba(37,99,235,0.6), inset 0 1px 0 rgba(255,255,255,0.2)',
-              position: 'relative',
-            }}>
-              Mulai Analisis Sekarang →
-            </button>
-          </div>
-        </section>
-
-        {/* ── Footer ───────────────────────────────────────────────────── */}
-        <footer style={{
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          padding: '2rem', textAlign: 'center',
-          fontSize: '0.72rem', color: 'rgba(255,255,255,0.2)',
+      {/* ── CTA Banner ────────────────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, padding: '4rem 2rem 8rem' }}>
+        <div style={{
+          maxWidth: 640, margin: '0 auto', textAlign: 'center',
+          ...g, padding: '3.5rem 2rem',
         }}>
-          AI Financial Intelligence · Data diproses di browser Anda, tidak dikirim ke server kami.
-        </footer>
-      </div>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
+            fontWeight: 400, color: textMain, marginBottom: '2rem',
+            letterSpacing: '-0.01em',
+          }}>
+            {t('landing_hero_1')}<br />
+            <em style={{ fontStyle: 'italic' }}>{t('landing_hero_2')}</em>
+          </h2>
+          <button
+            onClick={onEnter}
+            style={{
+              background: primary, color: '#fff', border: 'none',
+              borderRadius: '10px', padding: '0.875rem 2.25rem',
+              fontSize: '0.9375rem', fontWeight: 500, cursor: 'pointer',
+              boxShadow: `0 4px 20px rgba(74,134,240,0.28)`,
+              letterSpacing: '0.01em',
+            }}
+          >
+            {t('landing_cta_final')}
+          </button>
+        </div>
+      </section>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        body { margin: 0; }
-      `}</style>
+      {/* ── Footer ────────────────────────────────────────────────────────────── */}
+      <footer style={{
+        position: 'relative', zIndex: 1,
+        borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)',
+        padding: '1.5rem 2rem',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: '0.5rem',
+      }}>
+        <span style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: '0.875rem', color: textMuted, fontWeight: 400,
+        }}>
+          AI Financial Intelligence
+        </span>
+        <span style={{ fontSize: '0.8125rem', color: textMuted, fontWeight: 300 }}>
+          {t('landing_footer')}
+        </span>
+      </footer>
     </div>
   );
 }

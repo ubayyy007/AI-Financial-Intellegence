@@ -3,8 +3,10 @@ import { generateStatements, generatePersonalStatements } from '../utils/financi
 import { DownloadCloud, FileText, Check } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
+import { useApp } from '../context/AppContext';
 
 export default function FinancialStatements({ parsedData, mode = 'business' }) {
+  const { t } = useApp();
   const isPersonal = mode === 'personal' || mode === 'mikro';
   const statements = isPersonal
     ? generatePersonalStatements(parsedData)
@@ -99,99 +101,74 @@ export default function FinancialStatements({ parsedData, mode = 'business' }) {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>3 Statement Generator</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-            Dihasilkan otomatis dari data terstruktur Anda.
-          </p>
+          <h2 className="card-title" style={{ marginBottom: '0.25rem' }}>{t('fs_title')}</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>{t('fs_sub')}</p>
         </div>
-        
         <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
           <button className="btn btn-ghost" onClick={exportToExcel}>
-            <FileText size={15} />
-            Excel
+            <FileText size={15} />{t('fs_export_excel')}
           </button>
           <button className="btn btn-primary" onClick={exportToPDF} disabled={isExporting}>
             {isExporting ? <Check size={15} /> : <DownloadCloud size={15} />}
-            {isExporting ? 'Mengekspor...' : 'Export PDF'}
+            {isExporting ? t('fs_exporting') : t('fs_export_pdf')}
           </button>
         </div>
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', gap: '1.5rem' }}>
-        <button 
-          onClick={() => setActiveTab('labaRugi')}
-          style={{ 
-            background: 'none', border: 'none', padding: '0.75rem 0', fontWeight: '500',
-            color: activeTab === 'labaRugi' ? 'var(--text-main)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'labaRugi' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer', transition: 'all 0.2s'
-          }}
-        >
-          Laba Rugi
-        </button>
-        <button 
-          onClick={() => setActiveTab('neraca')}
-          style={{ 
-            background: 'none', border: 'none', padding: '0.75rem 0', fontWeight: '500',
-            color: activeTab === 'neraca' ? 'var(--text-main)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'neraca' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer', transition: 'all 0.2s'
-          }}
-        >
-          Neraca
-        </button>
-        <button 
-          onClick={() => setActiveTab('arusKas')}
-          style={{ 
-            background: 'none', border: 'none', padding: '0.75rem 0', fontWeight: '500',
-            color: activeTab === 'arusKas' ? 'var(--text-main)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'arusKas' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer', transition: 'all 0.2s'
-          }}
-        >
-          Arus Kas
-        </button>
+        {[['labaRugi','fs_tab_lr'],['neraca','fs_tab_neraca'],['arusKas','fs_tab_ak']].map(([key, tk]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            style={{
+              background: 'none', border: 'none', padding: '0.75rem 0', fontWeight: activeTab === key ? 500 : 400,
+              color: activeTab === key ? 'var(--text-main)' : 'var(--text-muted)',
+              borderBottom: activeTab === key ? '2px solid var(--primary)' : '2px solid transparent',
+              cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.875rem', letterSpacing: '0.01em',
+            }}
+          >
+            {t(tk)}
+          </button>
+        ))}
       </div>
 
       <div ref={reportRef} style={{ padding: '1.5rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
         {/* Laba Rugi */}
         {(activeTab === 'labaRugi' || isExporting) && (
           <div style={{ marginBottom: isExporting ? '3rem' : '0' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Laporan Laba Rugi</h3>
+            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontFamily: 'var(--font-serif)' }}>{t('fs_lr_title')}</h3>
             <table style={{ width: '100%', marginBottom: '1rem' }}>
               <tbody>
                 <tr>
-                  <td>{isPersonal ? 'Total Pendapatan' : 'Pendapatan Penjualan'}</td>
+                  <td>{isPersonal ? t('fs_revenue_personal') : t('fs_revenue')}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.revenue)}</td>
                 </tr>
                 {!isPersonal && (
                   <>
                     <tr>
-                      <td>Harga Pokok Penjualan (HPP)</td>
+                      <td>{t('fs_hpp')}</td>
                       <td style={{ textAlign: 'right', color: 'var(--danger)' }}>({formatCurrency(statements.incomeStatement.cogs)})</td>
                     </tr>
-                    <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
-                      <td>Laba Kotor</td>
+                    <tr style={{ fontWeight: 500, backgroundColor: 'var(--bg-card)' }}>
+                      <td>{t('fs_gross')}</td>
                       <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.grossProfit)}</td>
                     </tr>
                     <tr><td colSpan="2" style={{ padding: '0.75rem 0' }}></td></tr>
                   </>
                 )}
                 <tr>
-                  <td>{isPersonal ? 'Total Pengeluaran' : 'Biaya Operasional'}</td>
+                  <td>{isPersonal ? t('fs_opex_personal') : t('fs_opex')}</td>
                   <td style={{ textAlign: 'right', color: 'var(--danger)' }}>({formatCurrency(statements.incomeStatement.operatingExpenses)})</td>
                 </tr>
                 {!isPersonal && (
                   <tr>
-                    <td>Pendapatan Lain-lain</td>
+                    <td>{t('fs_other_income')}</td>
                     <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.otherIncome)}</td>
                   </tr>
                 )}
-                <tr>
-                  <td colSpan="2" style={{ borderBottom: '1px solid var(--border)' }}></td>
-                </tr>
-                <tr style={{ fontWeight: '700', fontSize: '1.125rem' }}>
-                  <td style={{ paddingTop: '1rem' }}>{isPersonal ? 'Selisih (Surplus/Defisit)' : 'Laba Bersih'}</td>
+                <tr><td colSpan="2" style={{ borderBottom: '1px solid var(--border)' }}></td></tr>
+                <tr style={{ fontWeight: 600, fontSize: '1.0625rem' }}>
+                  <td style={{ paddingTop: '1rem' }}>{isPersonal ? t('fs_net_personal') : t('fs_net')}</td>
                   <td style={{ textAlign: 'right', paddingTop: '1rem', color: statements.incomeStatement.netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                     {formatCurrency(statements.incomeStatement.netProfit)}
                   </td>
@@ -204,58 +181,35 @@ export default function FinancialStatements({ parsedData, mode = 'business' }) {
         {/* Neraca */}
         {(activeTab === 'neraca' || isExporting) && (
           <div style={{ marginBottom: isExporting ? '3rem' : '0' }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Neraca</h3>
-            
+            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontFamily: 'var(--font-serif)' }}>{t('fs_neraca_title')}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
               <div>
-                <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Aset</h4>
+                <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontFamily: 'var(--font-serif)', fontWeight: 500 }}>{t('fs_assets')}</h4>
                 <table style={{ width: '100%' }}>
                   <tbody>
-                    <tr>
-                      <td>Kas & Setara Kas</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.cash)}</td>
-                    </tr>
-                    <tr>
-                      <td>Piutang Usaha</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.accountsReceivable)}</td>
-                    </tr>
-                    <tr>
-                      <td>Peralatan / Inventaris</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.equipment)}</td>
-                    </tr>
-                    <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
-                      <td style={{ paddingTop: '1rem' }}>Total Aset</td>
+                    <tr><td>{t('fs_cash')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.cash)}</td></tr>
+                    <tr><td>{t('fs_receivable')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.accountsReceivable)}</td></tr>
+                    <tr><td>{t('fs_equipment')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.assets.equipment)}</td></tr>
+                    <tr style={{ fontWeight: 500, backgroundColor: 'var(--bg-card)' }}>
+                      <td style={{ paddingTop: '1rem' }}>{t('fs_total_assets')}</td>
                       <td style={{ textAlign: 'right', paddingTop: '1rem' }}>{formatCurrency(statements.balanceSheet.assets.totalAssets)}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-
               <div>
-                <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Kewajiban & Ekuitas</h4>
+                <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', fontFamily: 'var(--font-serif)', fontWeight: 500 }}>{t('fs_liab_equity')}</h4>
                 <table style={{ width: '100%' }}>
                   <tbody>
-                    <tr>
-                      <td>Utang Usaha</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.accountsPayable)}</td>
+                    <tr><td>{t('fs_ap')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.accountsPayable)}</td></tr>
+                    <tr><td>{t('fs_loans')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.loans)}</td></tr>
+                    <tr style={{ fontWeight: 500, backgroundColor: 'var(--bg-card)' }}>
+                      <td>{t('fs_total_liab')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.totalLiabilities)}</td>
                     </tr>
-                    <tr>
-                      <td>Utang Pinjaman</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.loans)}</td>
-                    </tr>
-                    <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
-                      <td>Total Kewajiban</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.liabilities.totalLiabilities)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan="2" style={{ padding: '0.5rem 0' }}></td>
-                    </tr>
-                    <tr>
-                      <td>Modal Pemilik & Laba Ditahan</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.equity.ownerEquity)}</td>
-                    </tr>
-                    <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
-                      <td style={{ paddingTop: '1rem' }}>Total Kew. & Ekuitas</td>
+                    <tr><td colSpan="2" style={{ padding: '0.5rem 0' }}></td></tr>
+                    <tr><td>{t('fs_owner_equity')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.balanceSheet.equity.ownerEquity)}</td></tr>
+                    <tr style={{ fontWeight: 500, backgroundColor: 'var(--bg-card)' }}>
+                      <td style={{ paddingTop: '1rem' }}>{t('fs_total_leq')}</td>
                       <td style={{ textAlign: 'right', paddingTop: '1rem' }}>{formatCurrency(statements.balanceSheet.equity.totalLiabilitiesAndEquity)}</td>
                     </tr>
                   </tbody>
@@ -268,26 +222,15 @@ export default function FinancialStatements({ parsedData, mode = 'business' }) {
         {/* Arus Kas */}
         {(activeTab === 'arusKas' || isExporting) && (
           <div>
-            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Laporan Arus Kas</h3>
+            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontFamily: 'var(--font-serif)' }}>{t('fs_ak_title')}</h3>
             <table style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               <tbody>
-                <tr>
-                  <td>Arus Kas dari Aktivitas Operasi</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.operating)}</td>
-                </tr>
-                <tr>
-                  <td>Arus Kas dari Aktivitas Investasi</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.investing)}</td>
-                </tr>
-                <tr>
-                  <td>Arus Kas dari Aktivitas Pendanaan</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.financing)}</td>
-                </tr>
-                <tr>
-                  <td colSpan="2" style={{ borderBottom: '1px solid var(--border)', padding: '0.5rem 0' }}></td>
-                </tr>
-                <tr style={{ fontWeight: '700', fontSize: '1.125rem' }}>
-                  <td style={{ paddingTop: '1rem' }}>Arus Kas Bersih</td>
+                <tr><td>{t('fs_cf_operating')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.operating)}</td></tr>
+                <tr><td>{t('fs_cf_investing')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.investing)}</td></tr>
+                <tr><td>{t('fs_cf_financing')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.financing)}</td></tr>
+                <tr><td colSpan="2" style={{ borderBottom: '1px solid var(--border)', padding: '0.5rem 0' }}></td></tr>
+                <tr style={{ fontWeight: 600, fontSize: '1.0625rem' }}>
+                  <td style={{ paddingTop: '1rem' }}>{t('fs_cf_net')}</td>
                   <td style={{ textAlign: 'right', paddingTop: '1rem', color: statements.cashFlowStatement.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                     {formatCurrency(statements.cashFlowStatement.netCashFlow)}
                   </td>
