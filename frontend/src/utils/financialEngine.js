@@ -191,6 +191,9 @@ export const generateStatements = (transactions) => {
   // Retained earnings dari laba berjalan
   equity += netProfit;
 
+  // Cicilan tanpa penerimaan pinjaman dalam periode → loans bisa negatif; clamp ke 0
+  loans = Math.max(0, loans);
+
   // Balancing act for simple MVP (To force A = L + E if data is incomplete)
   const totalAssets = cashBalance + accountsReceivable + equipment;
   const totalLiabilitiesAndEquity = loans + accountsPayable + equity;
