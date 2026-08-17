@@ -48,7 +48,7 @@ export default function FileUpload({ onDataParsed }) {
   const sectionStyle = {
     marginTop: '1rem',
     padding: '1rem 1.125rem',
-    background: 'rgba(255,255,255,0.02)',
+    background: 'var(--bg-secondary)',
     borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
   };

@@ -58,7 +58,7 @@ const ModeToggle = ({ mode, onChange, t }) => (
 function App() {
   const { t, lang, setLang, theme, setTheme } = useApp();
   const [showLanding, setShowLanding] = useState(true);
-  const [mode, setMode] = useState('business');
+  const [mode, setMode] = useState(() => localStorage.getItem('mode') || 'personal');
   const [parsedData, setParsedData] = useState([]);
   const [extractionResult, setExtractionResult] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('data');
@@ -86,15 +86,16 @@ function App() {
       if (!ok) return;
       setParsedData([]);
       setExtractionResult(null);
+      setActiveMainTab('data');
     }
     setMode(newMode);
+    localStorage.setItem('mode', newMode);
     const businessOnly = ['bi', 'investment', 'benchmark'];
     if (newMode === 'business' && activeMainTab === 'report') {
       setActiveMainTab('statements');
     } else if (newMode !== 'business' && businessOnly.includes(activeMainTab)) {
       setActiveMainTab('report');
     }
-    if (hasData) setActiveMainTab('data');
   };
 
   // ── Upload handlers ────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ function App() {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     width: 34, height: 34, borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--border-strong)',
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--bg-secondary)',
     color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s',
     flexShrink: 0,
   };

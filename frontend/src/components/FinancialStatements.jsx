@@ -132,7 +132,7 @@ export default function FinancialStatements({ parsedData, mode = 'business' }) {
         ))}
       </div>
 
-      <div ref={reportRef} style={{ padding: '1.5rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+      <div ref={reportRef} style={{ padding: '1.5rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
         {/* Laba Rugi */}
         {(activeTab === 'labaRugi' || isExporting) && (
           <div style={{ marginBottom: isExporting ? '3rem' : '0' }}>

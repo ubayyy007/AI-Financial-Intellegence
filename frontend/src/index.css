@@ -219,6 +219,7 @@ button { font-family: var(--font-sans); cursor: pointer; }
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: inline-block;
   letter-spacing: -0.02em;
 }
 
@@ -269,6 +270,10 @@ button { font-family: var(--font-sans); cursor: pointer; }
   background: rgba(255,255,255,0.012);
   transition: border-color 0.25s, background 0.25s, transform 0.25s, box-shadow 0.25s;
   user-select: none;
+}
+
+[data-theme="light"] .dropzone {
+  background: rgba(0,0,0,0.015);
 }
 
 .dropzone:hover,
@@ -425,6 +430,10 @@ tbody tr:hover td { background: rgba(255,255,255,0.022); }
   color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, color 0.3s;
   flex-shrink: 0;
+}
+
+[data-theme="light"] .step-circle {
+  background: rgba(0,0,0,0.04);
 }
 
 .step-item.active .step-circle {
