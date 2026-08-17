@@ -253,7 +253,7 @@ export default function LandingPage({ onEnter }) {
           <span style={{
             background: `linear-gradient(135deg, ${primary} 0%, #7c84d4 100%)`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
+            backgroundClip: 'text', display: 'inline-block',
           }}>
             {t('landing_hero_2')}
           </span>

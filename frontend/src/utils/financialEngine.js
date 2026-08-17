@@ -230,7 +230,9 @@ export const generateStatements = (transactions) => {
     const amount = isIncome ? t.amount : -t.amount;
     const cat = t.category;
 
-    if (isAsset(cat) || cat.toLowerCase().includes('peralatan')) {
+    if ((isAsset(cat) || cat.toLowerCase().includes('peralatan'))
+        && !cat.toLowerCase().includes('kas')
+        && !cat.toLowerCase().includes('bank')) {
       investingCF += amount;
     } else if (isLiability(cat) || isEquity(cat)) {
       financingCF += amount;

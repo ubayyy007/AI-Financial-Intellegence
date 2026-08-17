@@ -9,7 +9,7 @@ const AppContext = createContext({
 
 export function AppProvider({ children }) {
   const [lang,  setLang]  = useState(() => localStorage.getItem('lang')  || 'id');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
     localStorage.setItem('lang', lang);

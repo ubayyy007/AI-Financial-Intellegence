@@ -78,6 +78,15 @@ function App() {
 
   // ── Mode change ────────────────────────────────────────────────────────────
   const handleModeChange = (newMode) => {
+    if (newMode === mode) return;
+    if (hasData) {
+      const ok = window.confirm(
+        'Mengganti mode akan menghapus data yang sudah dimuat.\nData perlu diupload ulang sesuai mode baru.\n\nLanjutkan?'
+      );
+      if (!ok) return;
+      setParsedData([]);
+      setExtractionResult(null);
+    }
     setMode(newMode);
     const businessOnly = ['bi', 'investment', 'benchmark'];
     if (newMode === 'business' && activeMainTab === 'report') {
@@ -85,6 +94,7 @@ function App() {
     } else if (newMode !== 'business' && businessOnly.includes(activeMainTab)) {
       setActiveMainTab('report');
     }
+    if (hasData) setActiveMainTab('data');
   };
 
   // ── Upload handlers ────────────────────────────────────────────────────────
