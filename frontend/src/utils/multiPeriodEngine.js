@@ -1,4 +1,4 @@
-import { generateStatements } from './financialEngine';
+import { generateStatements, generatePersonalStatements } from './financialEngine';
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
@@ -50,7 +50,8 @@ const project = (values, steps) => {
 
 // Group transactions by calendar month and compute per-period statements.
 // Returns Period[] sorted chronologically.
-export const buildPeriods = (transactions) => {
+export const buildPeriods = (transactions, mode = 'business') => {
+  const isPersonal = mode === 'personal' || mode === 'mikro';
   const byMonth = {};
   for (const t of transactions) {
     const key = toMonthKey(t.date);
@@ -63,8 +64,10 @@ export const buildPeriods = (transactions) => {
     .sort()
     .map((key) => {
       const txns = byMonth[key];
-      const stmts = generateStatements(txns);
-      const expenses = stmts.incomeStatement.operatingExpenses + stmts.incomeStatement.cogs;
+      const stmts = isPersonal ? generatePersonalStatements(txns) : generateStatements(txns);
+      const expenses = isPersonal
+        ? stmts.incomeStatement.operatingExpenses
+        : stmts.incomeStatement.operatingExpenses + stmts.incomeStatement.cogs;
       return {
         key,
         label: monthLabel(key),

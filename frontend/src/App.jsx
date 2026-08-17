@@ -64,7 +64,7 @@ function App() {
   const [activeMainTab, setActiveMainTab] = useState('data');
 
   // Derived
-  const periods  = useMemo(() => buildPeriods(parsedData), [parsedData]);
+  const periods  = useMemo(() => buildPeriods(parsedData, mode), [parsedData, mode]);
   const forecast = useMemo(() => computeForecast(periods, 3), [periods]);
   const hasData  = parsedData.length > 0;
   const isMulti  = periods.length > 1;
