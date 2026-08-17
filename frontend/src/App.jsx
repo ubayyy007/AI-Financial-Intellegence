@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import './App.css';
+import LandingPage from './components/LandingPage';
 import { Check, User, Store, ShoppingBag } from 'lucide-react';
 import FileUpload from './components/FileUpload';
 import ConfidenceReview from './components/ConfidenceReview';
@@ -53,6 +54,7 @@ const ModeToggle = ({ mode, onChange }) => (
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [mode, setMode] = useState('business'); // 'personal' | 'business'
   const [parsedData, setParsedData] = useState([]);
   const [extractionResult, setExtractionResult] = useState(null);
@@ -132,6 +134,8 @@ function App() {
         { id: 'statements', label: 'Laporan Personal' },
         { id: 'multi',      label: 'Tren & Proyeksi'  },
       ];
+
+  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} />;
 
   return (
     <div className="container">

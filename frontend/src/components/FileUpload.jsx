@@ -1,10 +1,20 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, FileType, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import { UploadCloud, FileType, CheckCircle, AlertCircle, Download, FlaskConical } from 'lucide-react';
 import { parseFile } from '../utils/parser';
-import { downloadPersonalTemplate, downloadUMKMTemplate } from '../utils/templateGenerator';
+import {
+  downloadPersonalTemplate, downloadUMKMTemplate,
+  downloadDemoPersonal, downloadDemoWarung, downloadDemoUMKM,
+} from '../utils/templateGenerator';
+
+const DEMO_TABS = [
+  { key: 'personal', label: 'Personal',     fn: downloadDemoPersonal },
+  { key: 'warung',   label: 'Toko/Warung',  fn: downloadDemoWarung   },
+  { key: 'umkm',     label: 'Bisnis UMKM',  fn: downloadDemoUMKM     },
+];
 
 export default function FileUpload({ onDataParsed }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [demoTab, setDemoTab] = useState('personal');
   const [file, setFile] = useState(null);
   const [status, setStatus] = useState('idle'); // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState('');
@@ -144,7 +154,7 @@ const fileInputRef = useRef(null);
         </button>
       </div>
 
-      {/* Template download buttons */}
+      {/* Template download */}
       <div style={{
         marginTop: '1.25rem',
         padding: '1rem',
@@ -173,6 +183,62 @@ const fileInputRef = useRef(null);
             Template UMKM
           </button>
         </div>
+      </div>
+
+      {/* Demo / sample files */}
+      <div style={{
+        marginTop: '0.75rem',
+        padding: '1rem',
+        background: 'var(--bg-secondary)',
+        borderRadius: '8px',
+        border: '1px solid var(--border)',
+      }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <FlaskConical size={13} />
+          File demo siap pakai — langsung upload untuk mencoba:
+        </p>
+        {/* Tab selector */}
+        <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+          {DEMO_TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={(e) => { e.stopPropagation(); setDemoTab(key); }}
+              style={{
+                padding: '0.25rem 0.625rem',
+                fontSize: '0.7rem',
+                fontWeight: demoTab === key ? 600 : 400,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: demoTab === key ? 'var(--primary)' : 'transparent',
+                color: demoTab === key ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        {DEMO_TABS.map(({ key, label, fn }) => demoTab === key && (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+              Data {label} selama <strong>3 bulan</strong> (Jan–Mar 2024).
+              {key === 'personal' && ' Berisi gaji, pengeluaran harian, tabungan, dan cicilan.'}
+              {key === 'warung'   && ' Berisi penjualan harian, stok, sewa, dan gaji karyawan.'}
+              {key === 'umkm'    && ' Berisi penjualan B2B/online, bahan baku, pemasaran, dan operasional.'}
+            </p>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem', flexShrink: 0 }}
+              onClick={(e) => { e.stopPropagation(); fn(); }}
+            >
+              <Download size={13} />
+              Download Demo
+            </button>
+          </div>
+        ))}
       </div>
 
 <style>{`
