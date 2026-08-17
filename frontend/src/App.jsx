@@ -71,15 +71,16 @@ function App() {
   // business:       data → statements → bi → multi
   const STEPS = mode === 'business'
     ? ['data', 'statements', 'bi', 'investment', 'benchmark', 'multi']
-    : ['data', 'statements', 'multi'];
+    : ['data', 'report', 'statements', 'multi'];
 
   // ── Mode change ────────────────────────────────────────────────────────────
   const handleModeChange = (newMode) => {
     setMode(newMode);
-    // These tabs only exist in business mode — redirect if leaving
     const businessOnly = ['bi', 'investment', 'benchmark'];
-    if (newMode !== 'business' && businessOnly.includes(activeMainTab)) {
+    if (newMode === 'business' && activeMainTab === 'report') {
       setActiveMainTab('statements');
+    } else if (newMode !== 'business' && businessOnly.includes(activeMainTab)) {
+      setActiveMainTab('report');
     }
   };
 
@@ -89,7 +90,7 @@ function App() {
   const handleConfirmExtraction = () => {
     setParsedData(extractionResult.transactions);
     setExtractionResult(null);
-    setActiveMainTab('statements');
+    setActiveMainTab(mode === 'business' ? 'statements' : 'report');
   };
 
   const handleMergeExtraction = () => {
@@ -126,12 +127,14 @@ function App() {
     : mode === 'mikro'
     ? [
         { id: 'data',       label: 'Upload Data'    },
-        { id: 'statements', label: 'Laporan Toko'   },
+        { id: 'report',     label: 'Laporan Toko'   },
+        { id: 'statements', label: '3 Statement'    },
         { id: 'multi',      label: 'Tren & Proyeksi' },
       ]
     : [
         { id: 'data',       label: 'Upload Data'     },
-        { id: 'statements', label: 'Laporan Personal' },
+        { id: 'report',     label: 'Laporan Personal' },
+        { id: 'statements', label: '3 Statement'      },
         { id: 'multi',      label: 'Tren & Proyeksi'  },
       ];
 
@@ -210,24 +213,29 @@ function App() {
           </div>
         )}
 
-        {/* ── Tab 2: Statements (bisnis) / Laporan Personal / Laporan Toko ── */}
-        {activeMainTab === 'statements' && hasData && (
-          <div key="statements" className="page-fade">
+        {/* ── Tab 2: Laporan Personal / Laporan Toko (non-bisnis) ──────── */}
+        {activeMainTab === 'report' && hasData && (mode === 'personal' || mode === 'mikro') && (
+          <div key="report" className="page-fade">
             {mode === 'personal' ? (
               <>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.25rem', fontWeight: 700 }}>Laporan Keuangan Personal</h2>
                   <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                    Analisis kesehatan keuangan pribadi berdasarkan prinsip 50/30/20.
+                    Analisis kesehatan keuangan pribadi berdasarkan framework budgeting pilihan Anda.
                   </p>
                 </div>
                 <PersonalFinanceView transactions={parsedData} />
               </>
-            ) : mode === 'mikro' ? (
-              <MikroView transactions={parsedData} />
             ) : (
-              <FinancialStatements parsedData={parsedData} />
+              <MikroView transactions={parsedData} />
             )}
+          </div>
+        )}
+
+        {/* ── Tab 3 (semua mode): 3 Financial Statements ───────────────── */}
+        {activeMainTab === 'statements' && hasData && (
+          <div key="statements" className="page-fade">
+            <FinancialStatements parsedData={parsedData} />
           </div>
         )}
 

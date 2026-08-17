@@ -341,49 +341,37 @@ const normalizeRow = (rawValues, colMap, index) => {
   };
 };
 
-// ─── Smart Sheet Selection ─────────────────────────────────────────────────────
-// Picks the sheet most likely to contain transaction data.
+// ─── Sheet name → fallback date ────────────────────────────────────────────────
+// e.g. "Januari 2024" → "2024-01-15", "Feb 2024" → "2024-02-15"
 
-const PREFERRED_SHEET_KEYWORDS = ['laporan', 'transaksi', 'data', 'jurnal', 'mutasi', 'buku', 'detail', 'rekap'];
-
-const selectBestSheet = (workbook) => {
-  let best = null;
-  let bestScore = -1;
-
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet['!ref']) continue;
-
-    const range = XLSX.utils.decode_range(sheet['!ref']);
-    const rowCount = range.e.r - range.s.r;
-    const colCount = range.e.c - range.s.c;
-
-    let score = rowCount * 0.5 + colCount;
-
-    const nameLower = sheetName.toLowerCase();
-    if (PREFERRED_SHEET_KEYWORDS.some((kw) => nameLower.includes(kw))) score += 20;
-    // Penalize sheets that look like summary or cover pages
-    if (['cover', 'petunjuk', 'panduan', 'info', 'summary'].some((kw) => nameLower.includes(kw))) score -= 15;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = sheet;
-    }
-  }
-
-  return best;
+const MONTH_MAP = {
+  januari:1,februari:2,maret:3,april:4,mei:5,juni:6,
+  juli:7,agustus:8,september:9,oktober:10,november:11,desember:12,
+  jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,agu:8,aug:8,
+  sep:9,okt:10,oct:10,nov:11,des:12,dec:12,
 };
 
-// ─── Excel Parser ──────────────────────────────────────────────────────────────
+const dateFromSheetName = (name) => {
+  const lower = name.toLowerCase();
+  for (const [key, mon] of Object.entries(MONTH_MAP)) {
+    if (lower.includes(key)) {
+      const yearMatch = name.match(/\d{4}/);
+      const y = yearMatch ? yearMatch[0] : new Date().getFullYear();
+      return `${y}-${String(mon).padStart(2,'0')}-15`;
+    }
+  }
+  return null;
+};
 
-const parseExcelSmart = (workbook) => {
-  const sheet = selectBestSheet(workbook);
-  if (!sheet) throw new Error('Tidak ada sheet yang dapat dibaca.');
+// ─── Single-sheet transaction extractor ────────────────────────────────────────
 
+const SKIP_SHEET_NAMES = ['cover','petunjuk','panduan','info','summary','guide','readme'];
+
+const parseSheetTransactions = (sheet, sheetName) => {
+  if (!sheet['!ref']) return [];
   const range = XLSX.utils.decode_range(sheet['!ref']);
   const headerRow = findHeaderRow(sheet, range);
 
-  // Extract header labels
   const headers = [];
   for (let c = range.s.c; c <= range.e.c; c++) {
     const cell = sheet[XLSX.utils.encode_cell({ r: headerRow, c })];
@@ -391,21 +379,14 @@ const parseExcelSmart = (workbook) => {
   }
 
   const colMap = mapColumns(headers);
-
   const hasValueCols =
     colMap.amount !== undefined ||
     colMap.debit !== undefined ||
     colMap.credit !== undefined;
 
-  if (!hasValueCols) {
-    const headerNames = headers.filter(Boolean).join(', ');
-    throw new Error(
-      `Kolom nominal/debit/kredit tidak ditemukan.\n` +
-      `Kolom terdeteksi: ${headerNames || '(tidak ada)'}\n` +
-      `Pastikan file memiliki kolom: Nominal / Jumlah / Debit / Kredit.`
-    );
-  }
+  if (!hasValueCols) return []; // skip silently — caller handles the error
 
+  const fallbackDate = dateFromSheetName(sheetName);
   const results = [];
 
   for (let r = headerRow + 1; r <= range.e.r; r++) {
@@ -422,10 +403,42 @@ const parseExcelSmart = (workbook) => {
     if (!hasAnyValue) continue;
 
     const normalized = normalizeRow(rawValues, colMap, r);
-    if (normalized) results.push(normalized);
+    if (normalized) {
+      // Use sheet-name date as fallback when date column is missing/invalid
+      if ((!normalized.date || normalized.date === 'N/A') && fallbackDate) {
+        normalized.date = fallbackDate;
+      }
+      results.push(normalized);
+    }
   }
 
   return results;
+};
+
+// ─── Excel Parser — reads ALL data sheets ──────────────────────────────────────
+
+const parseExcelSmart = (workbook) => {
+  const allTransactions = [];
+
+  for (const sheetName of workbook.SheetNames) {
+    const nameLower = sheetName.toLowerCase();
+    if (SKIP_SHEET_NAMES.some((kw) => nameLower.includes(kw))) continue;
+
+    const sheet = workbook.Sheets[sheetName];
+    try {
+      const txs = parseSheetTransactions(sheet, sheetName);
+      allTransactions.push(...txs);
+    } catch { /* ignore unparseable sheets */ }
+  }
+
+  if (allTransactions.length === 0) {
+    throw new Error(
+      'Kolom nominal/debit/kredit tidak ditemukan di semua sheet.\n' +
+      'Pastikan file memiliki kolom: Nominal / Jumlah / Debit / Kredit.'
+    );
+  }
+
+  return allTransactions;
 };
 
 // ─── CSV Parser ────────────────────────────────────────────────────────────────
@@ -550,10 +563,13 @@ export const parseFile = async (file, options = {}) => {
       }
     } catch { /* lanjut ke AI */ }
 
-    const sheet = selectBestSheet(workbook);
-    if (!sheet) throw new Error('Tidak ada sheet yang dapat dibaca dalam file Excel ini.');
-    const csvText = XLSX.utils.sheet_to_csv(sheet);
-    return parseTextWithAI(csvText, file.name, onProgress); // already returns { transactions, confidence }
+    // Fallback: dump all non-skip sheets to CSV for AI parsing
+    const allCsv = workbook.SheetNames
+      .filter(n => !SKIP_SHEET_NAMES.some(kw => n.toLowerCase().includes(kw)))
+      .map(n => XLSX.utils.sheet_to_csv(workbook.Sheets[n]))
+      .join('\n');
+    if (!allCsv.trim()) throw new Error('Tidak ada sheet yang dapat dibaca dalam file Excel ini.');
+    return parseTextWithAI(allCsv, file.name, onProgress);
   }
 
   throw new Error('Format tidak didukung. Upload file CSV, Excel (.xlsx / .xls), atau PDF.');
