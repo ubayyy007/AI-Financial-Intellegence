@@ -103,8 +103,6 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
-  /* Force GPU layer so background-clip repaints correctly after theme change */
-  transform: translateZ(0);
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────────── */
@@ -121,7 +119,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  overflow-x: hidden;
   position: relative;
 }
 
@@ -231,7 +228,6 @@ button { font-family: var(--font-sans); cursor: pointer; }
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
-  transform: translateZ(0);
   letter-spacing: -0.02em;
 }
 

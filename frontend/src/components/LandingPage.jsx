@@ -144,7 +144,7 @@ export default function LandingPage({ onEnter }) {
     <div style={{
       minHeight: '100vh', background: bg,
       fontFamily: "'DM Sans', system-ui, sans-serif",
-      color: textMain, position: 'relative', overflow: 'hidden',
+      color: textMain, position: 'relative',
     }}>
       <ChartCanvas />
 
