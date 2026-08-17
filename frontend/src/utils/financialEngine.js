@@ -39,6 +39,65 @@ const isEquity = (category) => {
   return cat.includes('modal') || cat.includes('prive') || cat.includes('equity');
 };
 
+// ─── Personal / Mikro Statements ─────────────────────────────────────────────
+// Direction is determined purely by t.type (Debit = masuk, Kredit = keluar).
+// No HPP, no otherIncome bucket — just Pendapatan vs Pengeluaran.
+
+export const generatePersonalStatements = (transactions) => {
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  const incomeDetails = {};
+  const expenseDetails = {};
+
+  transactions.forEach((t) => {
+    const isIncome = t.type.toLowerCase() === 'debit';
+    const cat = t.category || 'Lain-lain';
+    if (isIncome) {
+      totalIncome += t.amount;
+      incomeDetails[cat] = (incomeDetails[cat] || 0) + t.amount;
+    } else {
+      totalExpenses += t.amount;
+      expenseDetails[cat] = (expenseDetails[cat] || 0) + t.amount;
+    }
+  });
+
+  const netProfit = totalIncome - totalExpenses;
+
+  const incomeStatement = {
+    revenue: totalIncome,
+    cogs: 0,
+    grossProfit: totalIncome,
+    operatingExpenses: totalExpenses,
+    otherIncome: 0,
+    netProfit,
+    details: { incomeDetails, expenseDetails },
+    isPersonal: true,
+  };
+
+  // Balance sheet — simplified cash position
+  let cashBalance = 0;
+  transactions.forEach((t) => {
+    cashBalance += t.type.toLowerCase() === 'debit' ? t.amount : -t.amount;
+  });
+  const balanceSheet = {
+    assets: { cash: cashBalance, accountsReceivable: 0, equipment: 0, totalAssets: cashBalance },
+    liabilities: { accountsPayable: 0, loans: 0, totalLiabilities: 0 },
+    equity: { ownerEquity: netProfit, totalLiabilitiesAndEquity: netProfit },
+  };
+
+  // Cash flow — all ops (personal has no investing/financing split)
+  const cashFlowStatement = {
+    operating: netProfit,
+    investing: 0,
+    financing: 0,
+    netCashFlow: netProfit,
+  };
+
+  return { incomeStatement, balanceSheet, cashFlowStatement };
+};
+
+// ─── Business Statements ──────────────────────────────────────────────────────
+
 export const generateStatements = (transactions) => {
   // --- 1. Laba Rugi (Income Statement) ---
   let totalRevenue = 0;

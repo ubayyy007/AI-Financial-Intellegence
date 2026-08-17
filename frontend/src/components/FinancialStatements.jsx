@@ -1,11 +1,14 @@
 import { useState, useRef } from 'react';
-import { generateStatements } from '../utils/financialEngine';
+import { generateStatements, generatePersonalStatements } from '../utils/financialEngine';
 import { DownloadCloud, FileText, Check } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 
-export default function FinancialStatements({ parsedData }) {
-  const statements = generateStatements(parsedData);
+export default function FinancialStatements({ parsedData, mode = 'business' }) {
+  const isPersonal = mode === 'personal' || mode === 'mikro';
+  const statements = isPersonal
+    ? generatePersonalStatements(parsedData)
+    : generateStatements(parsedData);
   const [activeTab, setActiveTab] = useState('labaRugi');
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef();
@@ -158,33 +161,37 @@ export default function FinancialStatements({ parsedData }) {
             <table style={{ width: '100%', marginBottom: '1rem' }}>
               <tbody>
                 <tr>
-                  <td>Pendapatan Penjualan</td>
+                  <td>{isPersonal ? 'Total Pendapatan' : 'Pendapatan Penjualan'}</td>
                   <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.revenue)}</td>
                 </tr>
+                {!isPersonal && (
+                  <>
+                    <tr>
+                      <td>Harga Pokok Penjualan (HPP)</td>
+                      <td style={{ textAlign: 'right', color: 'var(--danger)' }}>({formatCurrency(statements.incomeStatement.cogs)})</td>
+                    </tr>
+                    <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
+                      <td>Laba Kotor</td>
+                      <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.grossProfit)}</td>
+                    </tr>
+                    <tr><td colSpan="2" style={{ padding: '0.75rem 0' }}></td></tr>
+                  </>
+                )}
                 <tr>
-                  <td>Harga Pokok Penjualan (HPP)</td>
-                  <td style={{ textAlign: 'right', color: 'var(--danger)' }}>({formatCurrency(statements.incomeStatement.cogs)})</td>
-                </tr>
-                <tr style={{ fontWeight: '600', backgroundColor: 'var(--bg-card)' }}>
-                  <td>Laba Kotor</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.grossProfit)}</td>
-                </tr>
-                <tr>
-                  <td colSpan="2" style={{ padding: '1rem 0' }}></td>
-                </tr>
-                <tr>
-                  <td>Biaya Operasional</td>
+                  <td>{isPersonal ? 'Total Pengeluaran' : 'Biaya Operasional'}</td>
                   <td style={{ textAlign: 'right', color: 'var(--danger)' }}>({formatCurrency(statements.incomeStatement.operatingExpenses)})</td>
                 </tr>
-                <tr>
-                  <td>Pendapatan Lain-lain</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.otherIncome)}</td>
-                </tr>
+                {!isPersonal && (
+                  <tr>
+                    <td>Pendapatan Lain-lain</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(statements.incomeStatement.otherIncome)}</td>
+                  </tr>
+                )}
                 <tr>
                   <td colSpan="2" style={{ borderBottom: '1px solid var(--border)' }}></td>
                 </tr>
                 <tr style={{ fontWeight: '700', fontSize: '1.125rem' }}>
-                  <td style={{ paddingTop: '1rem' }}>Laba Bersih</td>
+                  <td style={{ paddingTop: '1rem' }}>{isPersonal ? 'Selisih (Surplus/Defisit)' : 'Laba Bersih'}</td>
                   <td style={{ textAlign: 'right', paddingTop: '1rem', color: statements.incomeStatement.netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                     {formatCurrency(statements.incomeStatement.netProfit)}
                   </td>

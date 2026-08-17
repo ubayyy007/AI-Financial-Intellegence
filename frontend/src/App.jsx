@@ -235,7 +235,7 @@ function App() {
         {/* ── Tab 3 (semua mode): 3 Financial Statements ───────────────── */}
         {activeMainTab === 'statements' && hasData && (
           <div key="statements" className="page-fade">
-            <FinancialStatements parsedData={parsedData} />
+            <FinancialStatements parsedData={parsedData} mode={mode} />
           </div>
         )}
 
