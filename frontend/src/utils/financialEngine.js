@@ -26,12 +26,24 @@ const isCOGS = (category) => {
 
 const isAsset = (category) => {
   const cat = category.toLowerCase();
-  return cat.includes('kas') || cat.includes('bank') || cat.includes('piutang') || cat.includes('inventaris') || cat.includes('peralatan');
+  return (
+    cat.includes('aset') || cat.includes('asset') ||
+    cat.includes('kas') || cat.includes('bank') ||
+    cat.includes('piutang') || cat.includes('inventaris') ||
+    cat.includes('peralatan') || cat.includes('mesin') ||
+    cat.includes('tetap') || cat.includes('kendaraan') ||
+    cat.includes('gedung') || cat.includes('bangunan') ||
+    cat.includes('tanah')
+  );
 };
 
 const isLiability = (category) => {
   const cat = category.toLowerCase();
-  return cat.includes('utang') || cat.includes('pinjaman') || cat.includes('liability');
+  return (
+    cat.includes('utang') || cat.includes('pinjaman') || cat.includes('liability') ||
+    cat.includes('cicilan') || cat.includes('angsuran') ||
+    cat.includes('kur') || cat.includes('kredit bank') || cat.includes('hutang')
+  );
 };
 
 const isEquity = (category) => {
@@ -162,9 +174,18 @@ export const generateStatements = (transactions) => {
     else cashBalance -= t.amount;
 
     if (isEquity(t.category) && isIncome) equity += t.amount;
-    if (isLiability(t.category) && isIncome) loans += t.amount;
+    // Loan receipt → adds to outstanding loans; cicilan/repayment → reduces loans
+    if (isLiability(t.category)) {
+      if (isIncome) loans += t.amount;
+      else loans -= t.amount; // cicilan/angsuran = repayment
+    }
     if (t.category.toLowerCase().includes('piutang') && !isIncome) accountsReceivable += t.amount;
-    if (t.category.toLowerCase().includes('peralatan') && !isIncome) equipment += t.amount;
+    // Asset purchase (mesin, kendaraan, peralatan, aset tetap) → fixed assets
+    if (isAsset(t.category) && !isIncome &&
+        !t.category.toLowerCase().includes('kas') &&
+        !t.category.toLowerCase().includes('bank')) {
+      equipment += t.amount;
+    }
   });
 
   // Retained earnings dari laba berjalan
