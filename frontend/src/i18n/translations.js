@@ -40,8 +40,8 @@ const translations = {
     app_desc:             'Platform AI untuk mengekstrak insight bisnis dan menyusun laporan standar dari data mentah Anda.',
     mode_label:           'Mode',
     mode_personal:        'Personal',
-    mode_warung:          'Toko',
-    mode_business:        'Bisnis',
+    mode_warung:          'UMKM',
+    mode_business:        'Bisnis Enterprise',
 
     // ── Stepper ───────────────────────────────────────────────────
     step_data:            'Upload',
@@ -180,8 +180,8 @@ const translations = {
     app_desc:             'AI platform to extract business insights and generate standard reports from your raw data.',
     mode_label:           'Mode',
     mode_personal:        'Personal',
-    mode_warung:          'Shop',
-    mode_business:        'Business',
+    mode_warung:          'UMKM',
+    mode_business:        'Enterprise',
 
     // ── Stepper ───────────────────────────────────────────────────
     step_data:            'Upload',

@@ -250,11 +250,7 @@ export default function LandingPage({ onEnter }) {
         }}>
           <span style={{ color: textMain }}>{t('landing_hero_1')}</span>
           <br />
-          <span style={{
-            background: `linear-gradient(135deg, ${primary} 0%, #7c84d4 100%)`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text', display: 'inline-block',
-          }}>
+          <span className="gradient-text">
             {t('landing_hero_2')}
           </span>
         </h1>

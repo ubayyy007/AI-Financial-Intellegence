@@ -96,6 +96,17 @@
   --shadow-glow:     0 0 24px rgba(37,99,235,0.14);
 }
 
+/* ─── Gradient text utility — reliable cross-browser clip ────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  /* Force GPU layer so background-clip repaints correctly after theme change */
+  transform: translateZ(0);
+}
+
 /* ─── Reset ──────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -220,6 +231,7 @@ button { font-family: var(--font-sans); cursor: pointer; }
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
+  transform: translateZ(0);
   letter-spacing: -0.02em;
 }
 
