@@ -2,49 +2,134 @@ import { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-// ─── Subtle chart lines canvas (original background) ─────────────────────────
-function ChartCanvas({ isDark }) {
+// ─── Floating Coins Canvas ────────────────────────────────────────────────────
+function CoinsCanvas() {
   const canvasRef = useRef(null);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    const dpr = window.devicePixelRatio || 1;
+
+    const resize = () => {
+      const w = canvas.offsetWidth, h = canvas.offsetHeight;
+      canvas.width  = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
     resize();
-    const N = 120;
-    const makePath = (start, v) => {
-      const pts = [start];
-      for (let i = 1; i < N; i++) pts[i] = Math.max(5, Math.min(95, pts[i-1] + (Math.random() - 0.48) * v));
-      return pts;
-    };
-    const p1 = makePath(40, 3.5), p2 = makePath(60, 2.5);
-    let frame = 0, animId;
-    const draw = () => {
-      const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-      const alpha = isDark ? 0.10 : 0.07;
-      const drawLine = (path, yOff, color) => {
-        const segW = W / (N - 1);
-        const start = Math.floor(frame / 1.5) % N;
+
+    const W = () => canvas.offsetWidth;
+    const H = () => canvas.offsetHeight;
+
+    const coins = Array.from({ length: 13 }, () => ({
+      x:    Math.random() * W(),
+      y:    H() + Math.random() * H(),
+      r:    24 + Math.random() * 64,
+      vx:   (Math.random() - 0.5) * 0.45,
+      vy:   -(0.40 + Math.random() * 0.95),
+      rot:  Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 0.016,
+      alpha: 0.38 + Math.random() * 0.52,
+    }));
+
+    const drawCoin = (x, y, r, rot, alpha) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = alpha;
+
+      // perspective tilt based on rotation
+      const tilt = Math.abs(Math.cos(rot * 2.8)) * 0.52 + 0.48;
+      ctx.scale(1, tilt);
+      ctx.rotate(rot);
+
+      // drop shadow
+      ctx.shadowColor    = 'rgba(70, 60, 130, 0.22)';
+      ctx.shadowBlur     = 28;
+      ctx.shadowOffsetY  = 10;
+
+      // main body — radial gradient (silver-lavender)
+      const grad = ctx.createRadialGradient(-r * 0.30, -r * 0.30, r * 0.04, 0, 0, r);
+      grad.addColorStop(0,    '#e0ddf2');
+      grad.addColorStop(0.30, '#c8c2e0');
+      grad.addColorStop(0.68, '#a49ec8');
+      grad.addColorStop(1,    '#7e7aaa');
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // outer rim stroke
+      ctx.shadowColor = 'transparent';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(215, 210, 235, 0.70)';
+      ctx.lineWidth   = r * 0.085;
+      ctx.stroke();
+
+      // serrated edge dots
+      const dots = Math.round(r * 0.78);
+      for (let d = 0; d < dots; d++) {
+        const a = (d / dots) * Math.PI * 2;
         ctx.beginPath();
-        for (let i = 0; i < N; i++) {
-          const idx = (start + i) % N;
-          const x = i * segW, y = H * yOff - (path[idx] / 100) * (H * 0.20);
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = color.replace('ALPHA', alpha); ctx.lineWidth = 1.2; ctx.stroke();
-        ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
-        ctx.fillStyle = color.replace('ALPHA', alpha * 0.35); ctx.fill();
-      };
-      drawLine(p1, 0.68, `rgba(37,99,235,ALPHA)`);
-      drawLine(p2, 0.84, `rgba(90,99,200,ALPHA)`);
-      frame++; animId = requestAnimationFrame(draw);
+        ctx.arc(Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92, r * 0.034, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(178, 172, 210, 0.65)';
+        ctx.fill();
+      }
+
+      // inner medallion
+      const inner = ctx.createRadialGradient(-r * 0.14, -r * 0.14, 0, 0, 0, r * 0.58);
+      inner.addColorStop(0, 'rgba(240, 236, 255, 0.52)');
+      inner.addColorStop(1, 'rgba(118, 112, 168, 0.14)');
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.58, 0, Math.PI * 2);
+      ctx.fillStyle = inner;
+      ctx.fill();
+
+      // decorative swirl lines (simplified)
+      ctx.strokeStyle = 'rgba(200, 195, 230, 0.30)';
+      ctx.lineWidth   = r * 0.045;
+      ctx.lineCap     = 'round';
+      for (let k = 0; k < 3; k++) {
+        const angle = (k / 3) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * r * 0.22, Math.sin(angle) * r * 0.22, r * 0.20, angle, angle + Math.PI);
+        ctx.stroke();
+      }
+
+      // specular highlight
+      ctx.beginPath();
+      ctx.arc(-r * 0.20, -r * 0.24, r * 0.36, Math.PI * 1.08, Math.PI * 1.62);
+      ctx.strokeStyle = 'rgba(248, 245, 255, 0.45)';
+      ctx.lineWidth   = r * 0.11;
+      ctx.stroke();
+
+      ctx.restore();
     };
-    draw();
+
+    let animId;
+    const tick = () => {
+      ctx.clearRect(0, 0, W(), H());
+      coins.forEach(c => {
+        drawCoin(c.x, c.y, c.r, c.rot, c.alpha);
+        c.x   += c.vx;
+        c.y   += c.vy;
+        c.rot += c.vrot;
+        if (c.y < -c.r * 3) {
+          c.y = H() + c.r * 1.5;
+          c.x = Math.random() * W();
+        }
+      });
+      animId = requestAnimationFrame(tick);
+    };
+    tick();
     return () => cancelAnimationFrame(animId);
-  }, [isDark]);
+  }, []);
+
   return (
-    <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
+    <canvas ref={canvasRef}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+    />
   );
 }
 
@@ -59,7 +144,7 @@ export default function LandingPage({ onEnter }) {
   const textMuted= isDark ? 'rgba(238,238,242,0.40)' : 'rgba(10,10,20,0.38)';
   const cardBg   = isDark ? '#17172a' : '#ffffff';
   const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.09)';
-  const heroBg   = isDark ? '#0f0f20' : '#e8e8f0';
+  const heroBg   = isDark ? '#12102a' : '#dddaea';
   const accentCard = '#2B2644';
 
   const features = [
@@ -130,30 +215,33 @@ export default function LandingPage({ onEnter }) {
             position: 'relative', width: '100%', borderRadius: 20, overflow: 'hidden',
             height: 'calc(100vh - 88px)', background: heroBg,
           }}>
-            {/* Subtle chart lines */}
-            <ChartCanvas isDark={isDark} />
+            {/* Floating coins */}
+            <CoinsCanvas />
 
-            {/* Gradient overlay — bottom half for text readability */}
+            {/* Glass content panel — bottom of hero card */}
             <div style={{
-              position: 'absolute', inset: 0,
+              position: 'absolute', bottom: 28, left: 28, right: 28, zIndex: 2,
               background: isDark
-                ? 'linear-gradient(to top, rgba(15,15,32,0.80) 0%, rgba(15,15,32,0.30) 45%, transparent 75%)'
-                : 'linear-gradient(to top, rgba(232,232,240,0.88) 0%, rgba(232,232,240,0.40) 45%, transparent 75%)',
-              zIndex: 1,
-            }} />
-
-            {/* Content overlay */}
-            <div style={{
-              position: 'absolute', inset: 0, zIndex: 2,
-              display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-              padding: '52px 52px',
+                ? 'rgba(18, 16, 42, 0.55)'
+                : 'rgba(255, 255, 255, 0.42)',
+              backdropFilter: 'blur(28px) saturate(1.6)',
+              WebkitBackdropFilter: 'blur(28px) saturate(1.6)',
+              borderRadius: 18,
+              border: isDark
+                ? '1px solid rgba(255,255,255,0.10)'
+                : '1px solid rgba(255,255,255,0.70)',
+              boxShadow: isDark
+                ? '0 8px 40px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.07)'
+                : '0 8px 40px rgba(80,70,140,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
+              padding: '36px 44px',
+              display: 'flex', flexDirection: 'column',
             }}>
-              {/* Tag pill — sits just above the headline */}
+              {/* Tag pill */}
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
-                backdropFilter: 'blur(12px)', borderRadius: 999,
-                padding: '5px 14px', marginBottom: 20, width: 'fit-content',
+                background: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
+                backdropFilter: 'blur(8px)', borderRadius: 999,
+                padding: '4px 13px', marginBottom: 18, width: 'fit-content',
                 fontSize: 10, fontWeight: 700, color: textMain,
                 letterSpacing: '0.10em', textTransform: 'uppercase',
               }}>
@@ -161,46 +249,46 @@ export default function LandingPage({ onEnter }) {
                 {t('landing_hero_tag')}
               </div>
 
-              {/* Headline — serif, plain black/white, no gradient */}
+              {/* Headline */}
               <h1 style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: 'clamp(2.6rem, 5.5vw, 4.5rem)', fontWeight: 400,
-                lineHeight: 1.08, letterSpacing: '-0.03em',
-                color: textMain, margin: '0 0 16px', maxWidth: 640,
+                fontSize: 'clamp(2.2rem, 4.5vw, 3.75rem)', fontWeight: 400,
+                lineHeight: 1.10, letterSpacing: '-0.03em',
+                color: textMain, margin: '0 0 14px', maxWidth: 580,
               }}>
-                {t('landing_hero_1')}<br />
-                {t('landing_hero_2')}
+                {t('landing_hero_1')}<br />{t('landing_hero_2')}
               </h1>
 
-              {/* Subtitle */}
-              <p style={{
-                fontSize: 'clamp(0.875rem, 1.4vw, 1.05rem)', color: textSub,
-                maxWidth: 440, margin: '0 0 32px', lineHeight: 1.65,
-              }}>
-                {t('landing_hero_sub')}
-              </p>
-
-              {/* Pill CTA */}
-              <button
-                onClick={onEnter}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 12, width: 'fit-content',
-                  background: textMain, color: bg, border: 'none', borderRadius: 9999,
-                  paddingLeft: 28, paddingRight: 8, paddingTop: 9, paddingBottom: 9,
-                  fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  letterSpacing: '-0.01em', transition: 'opacity 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.78'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
-                {t('landing_cta_primary')}
-                <span style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              {/* Subtitle + CTA row */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
+                <p style={{
+                  fontSize: 'clamp(0.85rem, 1.3vw, 1rem)', color: textSub,
+                  maxWidth: 420, margin: 0, lineHeight: 1.65,
                 }}>
-                  <ArrowRight size={16} color={textMain} />
-                </span>
-              </button>
+                  {t('landing_hero_sub')}
+                </p>
+
+                <button
+                  onClick={onEnter}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 12, flexShrink: 0,
+                    background: textMain, color: bg, border: 'none', borderRadius: 9999,
+                    paddingLeft: 28, paddingRight: 8, paddingTop: 9, paddingBottom: 9,
+                    fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    letterSpacing: '-0.01em', transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.78'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {t('landing_cta_primary')}
+                  <span style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <ArrowRight size={16} color={textMain} />
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
