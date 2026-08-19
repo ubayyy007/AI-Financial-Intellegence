@@ -201,6 +201,11 @@ export default function LandingPage({ onEnter }) {
         </div>
       </div>
 
+      {/* ── Everything below hero — chart bg spans all ───────────────────────── */}
+      <div style={{ position: 'relative' }}>
+        {/* Blurry chart bg — covers stats → footer */}
+        <ChartBg isDark={isDark} />
+
       {/* ── Stats strip ──────────────────────────────────────────────────────── */}
       <section style={{ position: 'relative', zIndex: 1, padding: '72px 28px 0' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -217,12 +222,9 @@ export default function LandingPage({ onEnter }) {
         </div>
       </section>
 
-      {/* ── Features — with blurry chart background ───────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 28px', overflow: 'hidden' }}>
-        {/* Blurry financial chart background */}
-        <ChartBg isDark={isDark} />
-
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto' }}>
+      {/* ── Features ──────────────────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, padding: '80px 28px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ marginBottom: 48 }}>
             <p style={{ fontSize: 11, color: textMuted, marginBottom: 10, letterSpacing: '0.09em', textTransform: 'uppercase', fontWeight: 700 }}>
               {t('landing_feat_title')}
@@ -331,6 +333,7 @@ export default function LandingPage({ onEnter }) {
         </span>
         <span style={{ fontSize: 12, color: textMuted }}>{t('landing_footer')}</span>
       </footer>
+      </div>{/* end: Everything below hero */}
     </div>
   );
 }
