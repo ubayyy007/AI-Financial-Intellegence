@@ -2,123 +2,49 @@ import { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-// ─── Floating Coins Canvas ────────────────────────────────────────────────────
-function CoinsCanvas() {
+// ─── Subtle chart lines canvas (original background) ─────────────────────────
+function ChartCanvas({ isDark }) {
   const canvasRef = useRef(null);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-
-    const resize = () => {
-      canvas.width  = canvas.offsetWidth  * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
     resize();
-
-    const W = () => canvas.offsetWidth;
-    const H = () => canvas.offsetHeight;
-
-    const coins = Array.from({ length: 14 }, (_, i) => ({
-      x:    Math.random() * W(),
-      y:    H() + Math.random() * H() * 0.8,
-      r:    22 + Math.random() * 58,
-      vx:   (Math.random() - 0.5) * 0.4,
-      vy:   -(0.45 + Math.random() * 1.0),
-      rot:  Math.random() * Math.PI * 2,
-      vrot: (Math.random() - 0.5) * 0.018,
-      alpha: 0.35 + Math.random() * 0.55,
-    }));
-
-    const drawCoin = (x, y, r, rot, alpha) => {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.globalAlpha = alpha;
-
-      // perspective tilt
-      const tilt = Math.abs(Math.cos(rot * 2.5)) * 0.55 + 0.45;
-      ctx.scale(1, tilt);
-      ctx.rotate(rot);
-
-      // drop shadow
-      ctx.shadowColor = 'rgba(80, 70, 140, 0.18)';
-      ctx.shadowBlur  = 24;
-      ctx.shadowOffsetY = 8;
-
-      // body gradient
-      const grad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, r * 0.04, 0, 0, r);
-      grad.addColorStop(0,   '#dddaee');
-      grad.addColorStop(0.35,'#c0bad8');
-      grad.addColorStop(0.72,'#9e98c0');
-      grad.addColorStop(1,   '#7c78a8');
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // outer rim
-      ctx.shadowColor = 'transparent';
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(210, 205, 230, 0.65)';
-      ctx.lineWidth   = r * 0.09;
-      ctx.stroke();
-
-      // serrated edge dots
-      const dots = Math.round(r * 0.75);
-      for (let d = 0; d < dots; d++) {
-        const a = (d / dots) * Math.PI * 2;
+    const N = 120;
+    const makePath = (start, v) => {
+      const pts = [start];
+      for (let i = 1; i < N; i++) pts[i] = Math.max(5, Math.min(95, pts[i-1] + (Math.random() - 0.48) * v));
+      return pts;
+    };
+    const p1 = makePath(40, 3.5), p2 = makePath(60, 2.5);
+    let frame = 0, animId;
+    const draw = () => {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      const alpha = isDark ? 0.10 : 0.07;
+      const drawLine = (path, yOff, color) => {
+        const segW = W / (N - 1);
+        const start = Math.floor(frame / 1.5) % N;
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * r * 0.93, Math.sin(a) * r * 0.93, r * 0.035, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(175, 168, 205, 0.60)';
-        ctx.fill();
-      }
-
-      // inner medallion glow
-      const inner = ctx.createRadialGradient(-r * 0.12, -r * 0.12, 0, 0, 0, r * 0.6);
-      inner.addColorStop(0, 'rgba(235, 230, 250, 0.48)');
-      inner.addColorStop(1, 'rgba(120, 115, 170, 0.12)');
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.60, 0, Math.PI * 2);
-      ctx.fillStyle = inner;
-      ctx.fill();
-
-      // highlight arc
-      ctx.beginPath();
-      ctx.arc(-r * 0.18, -r * 0.22, r * 0.38, Math.PI * 1.1, Math.PI * 1.65);
-      ctx.strokeStyle = 'rgba(245, 242, 255, 0.40)';
-      ctx.lineWidth   = r * 0.12;
-      ctx.lineCap     = 'round';
-      ctx.stroke();
-
-      ctx.restore();
-    };
-
-    let animId;
-    const tick = () => {
-      ctx.clearRect(0, 0, W(), H());
-      coins.forEach(c => {
-        drawCoin(c.x, c.y, c.r, c.rot, c.alpha);
-        c.x   += c.vx;
-        c.y   += c.vy;
-        c.rot += c.vrot;
-        if (c.y < -c.r * 3) {
-          c.y = H() + c.r * 1.5;
-          c.x = Math.random() * W();
+        for (let i = 0; i < N; i++) {
+          const idx = (start + i) % N;
+          const x = i * segW, y = H * yOff - (path[idx] / 100) * (H * 0.20);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-      });
-      animId = requestAnimationFrame(tick);
+        ctx.strokeStyle = color.replace('ALPHA', alpha); ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+        ctx.fillStyle = color.replace('ALPHA', alpha * 0.35); ctx.fill();
+      };
+      drawLine(p1, 0.68, `rgba(37,99,235,ALPHA)`);
+      drawLine(p2, 0.84, `rgba(90,99,200,ALPHA)`);
+      frame++; animId = requestAnimationFrame(draw);
     };
-    tick();
+    draw();
     return () => cancelAnimationFrame(animId);
-  }, []);
-
+  }, [isDark]);
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-    />
+    <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
   );
 }
 
@@ -204,8 +130,8 @@ export default function LandingPage({ onEnter }) {
             position: 'relative', width: '100%', borderRadius: 20, overflow: 'hidden',
             height: 'calc(100vh - 88px)', background: heroBg,
           }}>
-            {/* Coins animation fills the whole card */}
-            <CoinsCanvas />
+            {/* Subtle chart lines */}
+            <ChartCanvas isDark={isDark} />
 
             {/* Gradient overlay — bottom half for text readability */}
             <div style={{
