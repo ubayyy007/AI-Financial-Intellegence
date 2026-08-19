@@ -134,7 +134,7 @@ export default function FileUpload({ onDataParsed, openingBalance = 0, onOpening
         {/* Saldo Awal Kas input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 220 }}>
           <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            Saldo Awal Kas (Rp)
+            Saldo Awal Kas <span style={{ fontWeight: 400, opacity: 0.7 }}>(Opsional)</span>
           </label>
           <div style={{ position: 'relative', flex: 1 }}>
             <span style={{

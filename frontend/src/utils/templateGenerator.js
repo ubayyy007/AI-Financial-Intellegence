@@ -53,7 +53,7 @@ const buildPersonalWorkbook = () => {
     const dataStart = 4;
     const dataEnd   = dataStart + numRows - 1;
     const allRows = [
-      ['>> SALDO AWAL BULAN <<', 'Isi/ubah saldo kas awal bulan di kolom kanan -->', 0, '', 'Bukan pemasukan — posisi kas sebelum transaksi bulan ini'],
+      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 0, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
       ['', '', '', '', ''],
       ...rows,
       ['', '', '', '', ''],
@@ -132,7 +132,7 @@ const buildWarungWorkbook = () => {
     const dataStart = 4;
     const dataEnd   = dataStart + numRows - 1;
     const allRows = [
-      ['>> SALDO AWAL BULAN <<', 'Isi/ubah saldo kas awal bulan di kolom kanan -->', 0, '', 'Bukan pemasukan — posisi kas sebelum transaksi bulan ini'],
+      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 0, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
       ['', '', '', '', ''],
       ...rows,
       ['', '', '', '', ''],
