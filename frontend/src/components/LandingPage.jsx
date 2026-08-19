@@ -1,142 +1,6 @@
-import { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-// ─── 3D Coins with currency symbols ──────────────────────────────────────────
-const SYMBOLS = ['Rp', '$', '€', '¥', '₿', '£', '₩', 'Fr', '₺', '$', 'Rp', '€', '¥'];
-
-function CoinsCanvas() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const setSize = () => {
-      canvas.width  = canvas.offsetWidth  * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    setSize();
-
-    const W = () => canvas.offsetWidth;
-    const H = () => canvas.offsetHeight;
-
-    const coins = SYMBOLS.map((sym, i) => ({
-      x:     Math.random() * W(),
-      y:     H() + Math.random() * H() * 1.1,
-      r:     26 + Math.random() * 62,
-      vx:    (Math.random() - 0.5) * 0.42,
-      vy:    -(0.38 + Math.random() * 0.92),
-      phase: Math.random() * Math.PI * 2,
-      vPhase:0.012 + Math.random() * 0.012,
-      alpha: 0.40 + Math.random() * 0.50,
-      sym,
-    }));
-
-    const drawCoin = (x, y, r, phase, alpha, sym) => {
-      const tilt = (Math.sin(phase) + 1) / 2; // 0..1 smooth oscillation
-      const scaleY = 0.18 + tilt * 0.82;       // never fully flat
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.globalAlpha = alpha;
-
-      // body (ellipse = coin perspective)
-      ctx.save();
-      ctx.scale(1, scaleY);
-
-      ctx.shadowColor   = 'rgba(60, 50, 120, 0.28)';
-      ctx.shadowBlur    = 30;
-      ctx.shadowOffsetY = 12 * scaleY;
-
-      const grad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, r * 0.04, 0, 0, r);
-      grad.addColorStop(0,    '#e4e0f4');
-      grad.addColorStop(0.32, '#cac4e2');
-      grad.addColorStop(0.70, '#a8a0cc');
-      grad.addColorStop(1,    '#8078b0');
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // outer rim
-      ctx.shadowColor = 'transparent';
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(218, 213, 238, 0.72)';
-      ctx.lineWidth   = r * 0.082;
-      ctx.stroke();
-
-      // serrated edge dots
-      const dots = Math.round(r * 0.78);
-      for (let d = 0; d < dots; d++) {
-        const a = (d / dots) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * r * 0.91, Math.sin(a) * r * 0.91, r * 0.032, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(180, 173, 215, 0.62)';
-        ctx.fill();
-      }
-
-      // inner medallion fill
-      const inner = ctx.createRadialGradient(-r * 0.12, -r * 0.14, 0, 0, 0, r * 0.56);
-      inner.addColorStop(0, 'rgba(242, 238, 255, 0.55)');
-      inner.addColorStop(1, 'rgba(116, 108, 168, 0.12)');
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.56, 0, Math.PI * 2);
-      ctx.fillStyle = inner;
-      ctx.fill();
-
-      // specular arc
-      ctx.beginPath();
-      ctx.arc(-r * 0.19, -r * 0.23, r * 0.35, Math.PI * 1.08, Math.PI * 1.65);
-      ctx.strokeStyle = 'rgba(250, 247, 255, 0.48)';
-      ctx.lineWidth   = r * 0.10;
-      ctx.lineCap     = 'round';
-      ctx.stroke();
-
-      ctx.restore(); // undo scaleY
-
-      // currency symbol — drawn in normal scale, only when coin is not edge-on
-      if (tilt > 0.20) {
-        const symAlpha = Math.min(1, (tilt - 0.20) / 0.50);
-        ctx.globalAlpha = alpha * symAlpha;
-        ctx.save();
-        ctx.scale(1, scaleY * 0.95); // slight perspective on text too
-        const fontSize = r * (sym.length > 1 ? 0.42 : 0.54);
-        ctx.font        = `700 ${fontSize}px 'Playfair Display', Georgia, serif`;
-        ctx.textAlign   = 'center';
-        ctx.textBaseline= 'middle';
-        ctx.fillStyle   = 'rgba(72, 62, 120, 0.82)';
-        ctx.fillText(sym, 0, 0);
-        ctx.restore();
-        ctx.globalAlpha = alpha;
-      }
-
-      ctx.restore();
-    };
-
-    let animId;
-    const tick = () => {
-      ctx.clearRect(0, 0, W(), H());
-      coins.forEach(c => {
-        drawCoin(c.x, c.y, c.r, c.phase, c.alpha, c.sym);
-        c.x     += c.vx;
-        c.y     += c.vy;
-        c.phase += c.vPhase;
-        if (c.y < -c.r * 3) {
-          c.y = H() + c.r * 1.5;
-          c.x = Math.random() * W();
-        }
-      });
-      animId = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
-}
 
 // ─── Blurry financial chart background ───────────────────────────────────────
 function ChartBg({ isDark }) {
@@ -279,8 +143,11 @@ export default function LandingPage({ onEnter }) {
         <div style={{ flex: 1, padding: '0 20px 20px', display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ position: 'relative', width: '100%', borderRadius: 20, overflow: 'hidden', height: 'calc(100vh - 88px)', background: heroBg }}>
 
-            {/* 3D coins with currency symbols */}
-            <CoinsCanvas />
+            {/* Video background */}
+            <video autoPlay muted loop playsInline
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260423_161253_c72b1869-400f-45ed-ac0c-52f68c2ed5bd.mp4"
+            />
 
             {/* Glass content panel */}
             <div style={{
