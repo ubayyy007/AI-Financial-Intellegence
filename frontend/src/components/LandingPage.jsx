@@ -1,137 +1,6 @@
-import { useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-// ─── Floating Coins Canvas ────────────────────────────────────────────────────
-function CoinsCanvas() {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-
-    const resize = () => {
-      const w = canvas.offsetWidth, h = canvas.offsetHeight;
-      canvas.width  = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-
-    const W = () => canvas.offsetWidth;
-    const H = () => canvas.offsetHeight;
-
-    const coins = Array.from({ length: 13 }, () => ({
-      x:    Math.random() * W(),
-      y:    H() + Math.random() * H(),
-      r:    24 + Math.random() * 64,
-      vx:   (Math.random() - 0.5) * 0.45,
-      vy:   -(0.40 + Math.random() * 0.95),
-      rot:  Math.random() * Math.PI * 2,
-      vrot: (Math.random() - 0.5) * 0.016,
-      alpha: 0.38 + Math.random() * 0.52,
-    }));
-
-    const drawCoin = (x, y, r, rot, alpha) => {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.globalAlpha = alpha;
-
-      // perspective tilt based on rotation
-      const tilt = Math.abs(Math.cos(rot * 2.8)) * 0.52 + 0.48;
-      ctx.scale(1, tilt);
-      ctx.rotate(rot);
-
-      // drop shadow
-      ctx.shadowColor    = 'rgba(70, 60, 130, 0.22)';
-      ctx.shadowBlur     = 28;
-      ctx.shadowOffsetY  = 10;
-
-      // main body — radial gradient (silver-lavender)
-      const grad = ctx.createRadialGradient(-r * 0.30, -r * 0.30, r * 0.04, 0, 0, r);
-      grad.addColorStop(0,    '#e0ddf2');
-      grad.addColorStop(0.30, '#c8c2e0');
-      grad.addColorStop(0.68, '#a49ec8');
-      grad.addColorStop(1,    '#7e7aaa');
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // outer rim stroke
-      ctx.shadowColor = 'transparent';
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(215, 210, 235, 0.70)';
-      ctx.lineWidth   = r * 0.085;
-      ctx.stroke();
-
-      // serrated edge dots
-      const dots = Math.round(r * 0.78);
-      for (let d = 0; d < dots; d++) {
-        const a = (d / dots) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92, r * 0.034, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(178, 172, 210, 0.65)';
-        ctx.fill();
-      }
-
-      // inner medallion
-      const inner = ctx.createRadialGradient(-r * 0.14, -r * 0.14, 0, 0, 0, r * 0.58);
-      inner.addColorStop(0, 'rgba(240, 236, 255, 0.52)');
-      inner.addColorStop(1, 'rgba(118, 112, 168, 0.14)');
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.58, 0, Math.PI * 2);
-      ctx.fillStyle = inner;
-      ctx.fill();
-
-      // decorative swirl lines (simplified)
-      ctx.strokeStyle = 'rgba(200, 195, 230, 0.30)';
-      ctx.lineWidth   = r * 0.045;
-      ctx.lineCap     = 'round';
-      for (let k = 0; k < 3; k++) {
-        const angle = (k / 3) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(angle) * r * 0.22, Math.sin(angle) * r * 0.22, r * 0.20, angle, angle + Math.PI);
-        ctx.stroke();
-      }
-
-      // specular highlight
-      ctx.beginPath();
-      ctx.arc(-r * 0.20, -r * 0.24, r * 0.36, Math.PI * 1.08, Math.PI * 1.62);
-      ctx.strokeStyle = 'rgba(248, 245, 255, 0.45)';
-      ctx.lineWidth   = r * 0.11;
-      ctx.stroke();
-
-      ctx.restore();
-    };
-
-    let animId;
-    const tick = () => {
-      ctx.clearRect(0, 0, W(), H());
-      coins.forEach(c => {
-        drawCoin(c.x, c.y, c.r, c.rot, c.alpha);
-        c.x   += c.vx;
-        c.y   += c.vy;
-        c.rot += c.vrot;
-        if (c.y < -c.r * 3) {
-          c.y = H() + c.r * 1.5;
-          c.x = Math.random() * W();
-        }
-      });
-      animId = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  return (
-    <canvas ref={canvasRef}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-    />
-  );
-}
 
 // ─── Landing Page ──────────────────────────────────────────────────────────────
 export default function LandingPage({ onEnter }) {
@@ -144,7 +13,7 @@ export default function LandingPage({ onEnter }) {
   const textMuted= isDark ? 'rgba(238,238,242,0.40)' : 'rgba(10,10,20,0.38)';
   const cardBg   = isDark ? '#17172a' : '#ffffff';
   const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.09)';
-  const heroBg   = isDark ? '#12102a' : '#dddaea';
+  const heroBg   = isDark ? '#12102a' : '#d8d6e8';
   const accentCard = '#2B2644';
 
   const features = [
@@ -215,8 +84,12 @@ export default function LandingPage({ onEnter }) {
             position: 'relative', width: '100%', borderRadius: 20, overflow: 'hidden',
             height: 'calc(100vh - 88px)', background: heroBg,
           }}>
-            {/* Floating coins */}
-            <CoinsCanvas />
+            {/* Video background — 3D floating coins from Halo prompt */}
+            <video
+              autoPlay muted loop playsInline
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260423_161253_c72b1869-400f-45ed-ac0c-52f68c2ed5bd.mp4"
+            />
 
             {/* Glass content panel — bottom of hero card */}
             <div style={{
