@@ -50,7 +50,7 @@ const project = (values, steps) => {
 
 // Group transactions by calendar month and compute per-period statements.
 // Returns Period[] sorted chronologically.
-export const buildPeriods = (transactions, mode = 'business') => {
+export const buildPeriods = (transactions, mode = 'business', openingBalance = 0) => {
   const isPersonal = mode === 'personal' || mode === 'mikro';
   const byMonth = {};
   for (const t of transactions) {
@@ -60,19 +60,30 @@ export const buildPeriods = (transactions, mode = 'business') => {
     byMonth[key].push(t);
   }
 
+  let currentOpening = openingBalance;
+
   return Object.keys(byMonth)
     .sort()
     .map((key) => {
       const txns = byMonth[key];
-      const stmts = isPersonal ? generatePersonalStatements(txns) : generateStatements(txns);
+      const stmts = isPersonal
+        ? generatePersonalStatements(txns, currentOpening)
+        : generateStatements(txns, currentOpening);
       const expenses = isPersonal
         ? stmts.incomeStatement.operatingExpenses
         : stmts.incomeStatement.operatingExpenses + stmts.incomeStatement.cogs;
+
+      // Saldo akhir periode ini = saldo awal periode berikutnya
+      const closingBalance = stmts.cashFlowStatement.closingBalance;
+      currentOpening = closingBalance;
+
       return {
         key,
         label: monthLabel(key),
         transactions: txns,
         statements: stmts,
+        openingBalance: stmts.cashFlowStatement.openingBalance,
+        closingBalance,
         revenue:     stmts.incomeStatement.revenue,
         expenses,
         grossProfit: stmts.incomeStatement.grossProfit,

@@ -14,7 +14,7 @@ const DEMO_GEN_FNS  = { personal: generateDemoPersonalFile, warung: generateDemo
 const DEMO_DESC     = { personal: 'demo_personal_desc', warung: 'demo_warung_desc', umkm: 'demo_umkm_desc' };
 const DEMO_LABELS   = { personal: 'mode_personal', warung: 'mode_warung', umkm: 'mode_business' };
 
-export default function FileUpload({ onDataParsed }) {
+export default function FileUpload({ onDataParsed, openingBalance = 0, onOpeningBalanceChange }) {
   const { t } = useApp();
   const [isDragging, setIsDragging]         = useState(false);
   const [file, setFile]                     = useState(null);
@@ -130,12 +130,53 @@ export default function FileUpload({ onDataParsed }) {
         )}
       </div>
 
-      <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        {/* Saldo Awal Kas input */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 220 }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            Saldo Awal Kas (Rp)
+          </label>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <span style={{
+              position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)',
+              fontSize: '0.75rem', color: 'var(--text-muted)', pointerEvents: 'none',
+            }}>Rp</span>
+            <input
+              type="number"
+              min="0"
+              value={openingBalance || ''}
+              placeholder="0"
+              onChange={(e) => onOpeningBalanceChange?.(Math.max(0, Number(e.target.value) || 0))}
+              style={{
+                width: '100%',
+                padding: '0.35rem 0.5rem 0.35rem 2rem',
+                fontSize: '0.8125rem',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                outline: 'none',
+              }}
+            />
+          </div>
+          {openingBalance > 0 && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {new Intl.NumberFormat('id-ID').format(openingBalance)}
+            </span>
+          )}
+        </div>
+
         <button className="btn btn-ghost" onClick={() => fileInputRef.current?.click()}>
           <FileType size={15} />
           {t('upload_pick')}
         </button>
       </div>
+
+      {openingBalance > 0 && (
+        <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem', opacity: 0.8 }}>
+          ✓ Saldo awal akan masuk ke Neraca (Kas) dan Arus Kas — tidak mempengaruhi Laba Rugi.
+        </p>
+      )}
 
       {/* ── Template download ─────────────────────────────────────── */}
       <div style={sectionStyle}>

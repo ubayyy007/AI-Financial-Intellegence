@@ -5,12 +5,12 @@ import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 
-export default function FinancialStatements({ parsedData, mode = 'business' }) {
+export default function FinancialStatements({ parsedData, mode = 'business', openingBalance = 0 }) {
   const { t } = useApp();
   const isPersonal = mode === 'personal' || mode === 'mikro';
   const statements = isPersonal
-    ? generatePersonalStatements(parsedData)
-    : generateStatements(parsedData);
+    ? generatePersonalStatements(parsedData, openingBalance)
+    : generateStatements(parsedData, openingBalance);
   const [activeTab, setActiveTab] = useState('labaRugi');
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef();
@@ -225,16 +225,33 @@ export default function FinancialStatements({ parsedData, mode = 'business' }) {
             <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontFamily: 'var(--font-serif)' }}>{t('fs_ak_title')}</h3>
             <table style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
               <tbody>
+                {statements.cashFlowStatement.openingBalance > 0 && (
+                  <tr style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                    <td>Saldo Kas Awal Periode</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.openingBalance)}</td>
+                  </tr>
+                )}
+                {statements.cashFlowStatement.openingBalance > 0 && (
+                  <tr><td colSpan="2" style={{ borderBottom: '1px solid var(--border)', padding: '0.25rem 0' }}></td></tr>
+                )}
                 <tr><td>{t('fs_cf_operating')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.operating)}</td></tr>
                 <tr><td>{t('fs_cf_investing')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.investing)}</td></tr>
                 <tr><td>{t('fs_cf_financing')}</td><td style={{ textAlign: 'right' }}>{formatCurrency(statements.cashFlowStatement.financing)}</td></tr>
                 <tr><td colSpan="2" style={{ borderBottom: '1px solid var(--border)', padding: '0.5rem 0' }}></td></tr>
-                <tr style={{ fontWeight: 600, fontSize: '1.0625rem' }}>
-                  <td style={{ paddingTop: '1rem' }}>{t('fs_cf_net')}</td>
-                  <td style={{ textAlign: 'right', paddingTop: '1rem', color: statements.cashFlowStatement.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                <tr style={{ fontWeight: 500 }}>
+                  <td style={{ paddingTop: '0.75rem' }}>{t('fs_cf_net')}</td>
+                  <td style={{ textAlign: 'right', paddingTop: '0.75rem', color: statements.cashFlowStatement.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                     {formatCurrency(statements.cashFlowStatement.netCashFlow)}
                   </td>
                 </tr>
+                {statements.cashFlowStatement.openingBalance > 0 && (
+                  <tr style={{ fontWeight: 600, fontSize: '1.0625rem', borderTop: '2px solid var(--border)' }}>
+                    <td style={{ paddingTop: '0.75rem' }}>Saldo Kas Akhir Periode</td>
+                    <td style={{ textAlign: 'right', paddingTop: '0.75rem', color: statements.cashFlowStatement.closingBalance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                      {formatCurrency(statements.cashFlowStatement.closingBalance)}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

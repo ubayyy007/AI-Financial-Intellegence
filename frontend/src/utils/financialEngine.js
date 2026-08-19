@@ -55,7 +55,7 @@ const isEquity = (category) => {
 // Direction is determined purely by t.type (Debit = masuk, Kredit = keluar).
 // No HPP, no otherIncome bucket — just Pendapatan vs Pengeluaran.
 
-export const generatePersonalStatements = (transactions) => {
+export const generatePersonalStatements = (transactions, openingBalance = 0) => {
   let totalIncome = 0;
   let totalExpenses = 0;
   const incomeDetails = {};
@@ -86,23 +86,26 @@ export const generatePersonalStatements = (transactions) => {
     isPersonal: true,
   };
 
-  // Balance sheet — simplified cash position
-  let cashBalance = 0;
+  // Balance sheet — cash from transactions + opening balance
+  let cashFromTx = 0;
   transactions.forEach((t) => {
-    cashBalance += t.type.toLowerCase() === 'debit' ? t.amount : -t.amount;
+    cashFromTx += t.type.toLowerCase() === 'debit' ? t.amount : -t.amount;
   });
+  const cashBalance = openingBalance + cashFromTx;
   const balanceSheet = {
     assets: { cash: cashBalance, accountsReceivable: 0, equipment: 0, totalAssets: cashBalance },
     liabilities: { accountsPayable: 0, loans: 0, totalLiabilities: 0 },
-    equity: { ownerEquity: netProfit, totalLiabilitiesAndEquity: netProfit },
+    equity: { ownerEquity: cashBalance, totalLiabilitiesAndEquity: cashBalance },
   };
 
-  // Cash flow — all ops (personal has no investing/financing split)
+  // Cash flow — opening → operations → closing
   const cashFlowStatement = {
+    openingBalance,
     operating: netProfit,
     investing: 0,
     financing: 0,
     netCashFlow: netProfit,
+    closingBalance: openingBalance + netProfit,
   };
 
   return { incomeStatement, balanceSheet, cashFlowStatement };
@@ -110,7 +113,7 @@ export const generatePersonalStatements = (transactions) => {
 
 // ─── Business Statements ──────────────────────────────────────────────────────
 
-export const generateStatements = (transactions) => {
+export const generateStatements = (transactions, openingBalance = 0) => {
   // --- 1. Laba Rugi (Income Statement) ---
   let totalRevenue = 0;
   let totalCOGS = 0;
@@ -194,20 +197,23 @@ export const generateStatements = (transactions) => {
   // Cicilan tanpa penerimaan pinjaman dalam periode → loans bisa negatif; clamp ke 0
   loans = Math.max(0, loans);
 
+  // Tambahkan saldo awal kas ke posisi kas akhir
+  const totalCash = openingBalance + cashBalance;
+
   // Balancing act for simple MVP (To force A = L + E if data is incomplete)
-  const totalAssets = cashBalance + accountsReceivable + equipment;
+  const totalAssets = totalCash + accountsReceivable + equipment;
   const totalLiabilitiesAndEquity = loans + accountsPayable + equity;
   const imbalance = totalAssets - totalLiabilitiesAndEquity;
-  
+
   // Jika tidak balance (karena data mentah bukan double entry), kita sesuaikan di Modal/Laba Ditahan
   equity += imbalance;
 
   const balanceSheet = {
     assets: {
-      cash: cashBalance,
+      cash: totalCash,
       accountsReceivable,
       equipment,
-      totalAssets: totalAssets
+      totalAssets,
     },
     liabilities: {
       accountsPayable,
@@ -242,11 +248,14 @@ export const generateStatements = (transactions) => {
     }
   });
 
+  const netCashFlow = operatingCF + investingCF + financingCF;
   const cashFlowStatement = {
+    openingBalance,
     operating: operatingCF,
     investing: investingCF,
     financing: financingCF,
-    netCashFlow: operatingCF + investingCF + financingCF
+    netCashFlow,
+    closingBalance: openingBalance + netCashFlow,
   };
 
   return {

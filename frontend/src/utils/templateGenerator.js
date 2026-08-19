@@ -49,7 +49,19 @@ const buildPersonalWorkbook = () => {
       [fmtDate(y,m,28), 'Beli buku pengembangan diri',    '',          89000,    'Pendidikan'],
     ].filter(Boolean);
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const numRows = rows.length;
+    const dataStart = 4;
+    const dataEnd   = dataStart + numRows - 1;
+    const allRows = [
+      ['>> SALDO AWAL BULAN <<', 'Isi/ubah saldo kas awal bulan di kolom kanan -->', 0, '', 'Bukan pemasukan — posisi kas sebelum transaksi bulan ini'],
+      ['', '', '', '', ''],
+      ...rows,
+      ['', '', '', '', ''],
+      ['>> SALDO AKHIR <<', 'Saldo Awal + Total Masuk - Total Keluar (otomatis)',
+        { f: `C1+SUMIF(C${dataStart}:C${dataEnd},"<>",C${dataStart}:C${dataEnd})-SUMIF(D${dataStart}:D${dataEnd},"<>",D${dataStart}:D${dataEnd})` },
+        '', ''],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
     ws['!cols'] = [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
@@ -116,7 +128,19 @@ const buildWarungWorkbook = () => {
       [fmtDate(y,m,27), 'Beli stok akhir bulan',           '',          445000,    'Bahan Baku'],
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const numRows = rows.length;
+    const dataStart = 4;
+    const dataEnd   = dataStart + numRows - 1;
+    const allRows = [
+      ['>> SALDO AWAL BULAN <<', 'Isi/ubah saldo kas awal bulan di kolom kanan -->', 0, '', 'Bukan pemasukan — posisi kas sebelum transaksi bulan ini'],
+      ['', '', '', '', ''],
+      ...rows,
+      ['', '', '', '', ''],
+      ['>> SALDO AKHIR <<', 'Saldo Awal + Total Masuk - Total Keluar (otomatis)',
+        { f: `C1+SUMIF(C${dataStart}:C${dataEnd},"<>",C${dataStart}:C${dataEnd})-SUMIF(D${dataStart}:D${dataEnd},"<>",D${dataStart}:D${dataEnd})` },
+        '', ''],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
     ws['!cols'] = [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
@@ -235,7 +259,22 @@ export const downloadPersonalTemplate = () => {
     ...Array(10).fill(['', '', '', '', '']),
   ];
 
-  const wsJournal = XLSX.utils.aoa_to_sheet(journalData);
+  // Tambahkan baris Saldo Awal di atas dan Saldo Akhir di bawah
+  const totalDataRows = journalData.length + 10; // header + sample + empty rows
+  const dataStartRow = 4; // baris ke-4 (setelah 2 baris saldo awal + 1 header)
+  const dataEndRow   = dataStartRow + totalDataRows - 1;
+
+  const journalWithBalance = [
+    ['>> SALDO AWAL BULAN <<', 'Isi nominal kas awal bulan di kolom sebelah kanan -->', 0, '', 'Bukan pemasukan — ini posisi kas Anda sebelum transaksi bulan ini'],
+    ['', '', '', '', ''],
+    ...journalData,
+    ['', '', '', '', ''],
+    ['>> SALDO AKHIR <<', 'Dihitung otomatis: Saldo Awal + Total Masuk - Total Keluar',
+      { f: `C1+SUMIF(C${dataStartRow}:C${dataEndRow},"<>",C${dataStartRow}:C${dataEndRow})-SUMIF(D${dataStartRow}:D${dataEndRow},"<>",D${dataStartRow}:D${dataEndRow})` },
+      '', ''],
+  ];
+
+  const wsJournal = XLSX.utils.aoa_to_sheet(journalWithBalance);
   applyWidths(wsJournal);
   XLSX.utils.book_append_sheet(wb, wsJournal, 'Jurnal Harian');
 
@@ -314,7 +353,21 @@ export const downloadUMKMTemplate = () => {
     ...Array(10).fill(['', '', '', '', '']),
   ];
 
-  const wsJournal = XLSX.utils.aoa_to_sheet(journalData);
+  const totalUMKMRows = journalData.length;
+  const umkmDataStart = 4;
+  const umkmDataEnd   = umkmDataStart + totalUMKMRows - 1;
+
+  const journalWithBalance = [
+    ['>> SALDO AWAL BULAN <<', 'Isi nominal kas awal bulan di kolom sebelah kanan -->', 0, '', 'Bukan pemasukan — ini posisi kas usaha sebelum transaksi bulan ini'],
+    ['', '', '', '', ''],
+    ...journalData,
+    ['', '', '', '', ''],
+    ['>> SALDO AKHIR <<', 'Dihitung otomatis: Saldo Awal + Total Masuk - Total Keluar',
+      { f: `C1+SUMIF(C${umkmDataStart}:C${umkmDataEnd},"<>",C${umkmDataStart}:C${umkmDataEnd})-SUMIF(D${umkmDataStart}:D${umkmDataEnd},"<>",D${umkmDataStart}:D${umkmDataEnd})` },
+      '', ''],
+  ];
+
+  const wsJournal = XLSX.utils.aoa_to_sheet(journalWithBalance);
   applyWidths(wsJournal);
   XLSX.utils.book_append_sheet(wb, wsJournal, 'Jurnal Harian');
 

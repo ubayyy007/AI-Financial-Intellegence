@@ -118,9 +118,10 @@ function App() {
   const [parsedData, setParsedData] = useState([]);
   const [extractionResult, setExtractionResult] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('data');
+  const [openingBalance, setOpeningBalance] = useState(0);
 
   // Derived
-  const periods  = useMemo(() => buildPeriods(parsedData, mode), [parsedData, mode]);
+  const periods  = useMemo(() => buildPeriods(parsedData, mode, openingBalance), [parsedData, mode, openingBalance]);
   const forecast = useMemo(() => computeForecast(periods, 3), [periods]);
   const hasData  = parsedData.length > 0;
   const isMulti  = periods.length > 1;
@@ -295,7 +296,11 @@ function App() {
           <div key="data" className="page-fade">
             {!extractionResult ? (
               <>
-                <FileUpload onDataParsed={handleDataParsed} />
+                <FileUpload
+                onDataParsed={handleDataParsed}
+                openingBalance={openingBalance}
+                onOpeningBalanceChange={setOpeningBalance}
+              />
                 {hasData && (
                   <p style={{ textAlign: 'center', marginTop: '0.875rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                     {parsedData.length} {t('periods_loaded')} ({periods.length} {t('periods_count')}).{' '}
@@ -337,7 +342,7 @@ function App() {
         {/* ── Tab 3 (semua mode): 3 Financial Statements ───────────────── */}
         {activeMainTab === 'statements' && hasData && (
           <div key="statements" className="page-fade">
-            <FinancialStatements parsedData={parsedData} mode={mode} />
+            <FinancialStatements parsedData={parsedData} mode={mode} openingBalance={openingBalance} />
           </div>
         )}
 
