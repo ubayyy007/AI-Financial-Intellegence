@@ -210,6 +210,8 @@ function App() {
 
   if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} />
 
+  const goHome = () => setShowLanding(true);
+
   // ── Shared icon-button style ────────────────────────────────────────────────
   const iconBtn = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -231,6 +233,15 @@ function App() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.625rem', paddingTop: '0.25rem', flexShrink: 0 }}>
             {/* Controls row: lang + theme + mode */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {/* Back to home */}
+              <button
+                style={{ ...iconBtn, paddingLeft: '0.65rem', paddingRight: '0.65rem', width: 'auto', gap: '0.3rem', fontSize: '0.75rem' }}
+                onClick={goHome}
+                title="Kembali ke Beranda"
+              >
+                <span style={{ fontSize: 13 }}>←</span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.02em' }}>Beranda</span>
+              </button>
               {/* Language toggle */}
               <button
                 style={iconBtn}
