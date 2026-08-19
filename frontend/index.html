@@ -1,14 +1,132 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Platform AI untuk mengubah data keuangan mentah menjadi laporan standar dan insight bisnis otomatis." />
-    <title>AI Financial Intelligence — Platform Laporan Keuangan Otomatis</title>
+
+    <!-- ── Primary Meta ──────────────────────────────────────────────────────── -->
+    <title>AI Financial Intelligence — Laporan Keuangan Otomatis untuk UMKM Indonesia</title>
+    <meta name="description" content="Upload data keuangan Anda, dapatkan Laporan Laba Rugi, Neraca, dan Arus Kas dalam hitungan detik. Platform AI untuk UMKM dan personal finance Indonesia — gratis, tanpa coding." />
+    <meta name="keywords" content="laporan keuangan otomatis, AI keuangan UMKM, software akuntansi Indonesia, laba rugi otomatis, neraca keuangan, arus kas, analisis keuangan UMKM, laporan keuangan dari Excel, laporan keuangan dari CSV, keuangan personal, financial intelligence Indonesia" />
+    <meta name="author" content="AI Financial Intelligence" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="color-scheme" content="light dark" />
+
+    <!-- ── Canonical ─────────────────────────────────────────────────────────── -->
+    <link rel="canonical" href="https://ai-financial-intellegence.vercel.app/" />
+
+    <!-- ── Open Graph (WhatsApp, Facebook, LinkedIn) ────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ai-financial-intellegence.vercel.app/" />
+    <meta property="og:site_name" content="AI Financial Intelligence" />
+    <meta property="og:title" content="AI Financial Intelligence — Laporan Keuangan Otomatis untuk UMKM" />
+    <meta property="og:description" content="Upload CSV atau Excel, langsung dapat 3 laporan keuangan standar: Laba Rugi, Neraca, dan Arus Kas. AI membaca dan mengklasifikasi transaksi Anda secara otomatis. Gratis." />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- ── Twitter / X Card ──────────────────────────────────────────────────── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI Financial Intelligence — Laporan Keuangan Otomatis" />
+    <meta name="twitter:description" content="Upload data keuangan Anda, dapatkan Laporan Laba Rugi, Neraca, dan Arus Kas dalam hitungan detik. Untuk UMKM dan personal finance Indonesia." />
+    <meta name="twitter:site" content="@aifinancialid" />
+    <meta name="twitter:creator" content="@aifinancialid" />
+
+    <!-- ── Favicon ───────────────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- ── Geo / Region (relevan untuk lomba Indonesia) ─────────────────────── -->
+    <meta name="geo.region" content="ID" />
+    <meta name="geo.country" content="Indonesia" />
+    <meta name="language" content="Indonesian" />
+
+    <!-- ── Structured Data: SoftwareApplication ─────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AI Financial Intelligence",
+      "alternateName": "AI FinIntel",
+      "description": "Platform AI yang mengubah data keuangan mentah (CSV, Excel, PDF) menjadi 3 laporan keuangan standar — Laba Rugi, Neraca, dan Arus Kas — secara otomatis dalam hitungan detik. Dirancang untuk UMKM dan keuangan personal Indonesia.",
+      "applicationCategory": "FinanceApplication",
+      "applicationSubCategory": "Accounting Software",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "IDR"
+      },
+      "featureList": [
+        "Ekstraksi otomatis dari CSV, Excel, dan PDF",
+        "Laporan Laba Rugi otomatis",
+        "Neraca Keuangan otomatis",
+        "Laporan Arus Kas otomatis",
+        "Analisis multi-periode dan proyeksi",
+        "Dashboard BI untuk bisnis",
+        "Skor kelayakan investasi",
+        "Benchmark sektor UMKM Indonesia",
+        "Mode Personal, UMKM, dan Bisnis Enterprise"
+      ],
+      "audience": {
+        "@type": "BusinessAudience",
+        "audienceType": "UMKM, pemilik bisnis, profesional keuangan Indonesia"
+      },
+      "inLanguage": ["id", "en"],
+      "url": "https://ai-financial-intellegence.vercel.app/",
+      "creator": {
+        "@type": "Person",
+        "name": "AI Financial Intelligence Team"
+      }
+    }
+    </script>
+
+    <!-- ── Structured Data: FAQPage (boost search snippet) ──────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Apa itu AI Financial Intelligence?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "AI Financial Intelligence adalah platform web gratis yang secara otomatis mengubah data keuangan mentah (CSV, Excel, PDF) menjadi 3 laporan keuangan standar: Laporan Laba Rugi, Neraca, dan Laporan Arus Kas, menggunakan teknologi AI."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Apakah AI Financial Intelligence gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ya, AI Financial Intelligence tersedia gratis tanpa perlu registrasi atau instalasi. Cukup upload file keuangan Anda dan laporan langsung dibuat otomatis."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Format file apa yang didukung?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Platform mendukung file CSV, Excel (.xls dan .xlsx) termasuk multi-sheet, dan PDF. AI akan membaca dan mengekstrak transaksi secara otomatis."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Apakah cocok untuk UMKM Indonesia?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ya, platform ini dirancang khusus untuk kebutuhan UMKM Indonesia dengan mode Warung/Toko untuk usaha kecil, mode UMKM untuk bisnis menengah, dan mode Personal untuk keuangan pribadi."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ── Fonts ─────────────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
