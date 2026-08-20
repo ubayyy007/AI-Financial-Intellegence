@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect } from 'react';
 import translations from '../i18n/translations';
 
 const AppContext = createContext({
@@ -29,4 +29,4 @@ export function AppProvider({ children }) {
   );
 }
 
-export const useApp = () => useContext(AppContext);
+export { AppContext };

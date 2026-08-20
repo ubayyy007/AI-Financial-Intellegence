@@ -1,8 +1,19 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+let pdfjsPromise;
 
-// Use local worker (bundled by Vite) — more reliable than CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+const loadPdfJs = () => {
+  if (!pdfjsPromise) {
+    pdfjsPromise = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjsModule, workerModule]) => {
+      const pdfjsLib = pdfjsModule;
+      // Use local worker (bundled by Vite) — more reliable than CDN.
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+  return pdfjsPromise;
+};
 
 // Google Gemini — free tier: 1.500 request/hari, tidak perlu kartu kredit
 const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
@@ -56,8 +67,9 @@ const geminiRequest = async (requestBody, userApiKey) => {
   // 2. Direct call fallback (local dev with user's stored key)
   if (!userApiKey) {
     throw new Error(
-      'API Key Google Gemini belum dikonfigurasi. ' +
-      'Masukkan API key Anda di bagian "Pengaturan API untuk PDF" di bawah area upload.',
+      'Gemini API belum dikonfigurasi. ' +
+      'Untuk production, administrator perlu mengisi GEMINI_API_KEY di Vercel. ' +
+      'Untuk lokal, gunakan VITE_GEMINI_API_KEY di .env.local.',
     );
   }
 
@@ -77,6 +89,7 @@ const geminiRequest = async (requestBody, userApiKey) => {
 // ─── PDF Text Extraction ───────────────────────────────────────────────────────
 
 const extractTextFromPDF = async (file, onProgress) => {
+  const pdfjsLib = await loadPdfJs();
   onProgress?.('Membaca file PDF...');
 
   const arrayBuffer = await file.arrayBuffer();

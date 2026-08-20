@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/useApp';
 
 
 // ─── Blurry financial chart background ───────────────────────────────────────

@@ -1,18 +1,20 @@
-import { useState, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import './App.css';
 import LandingPage from './components/LandingPage';
-import { Check, User, Store, ShoppingBag, Moon, Sun, Languages } from 'lucide-react';
-import { useApp } from './context/AppContext';
-import FileUpload from './components/FileUpload';
-import ConfidenceReview from './components/ConfidenceReview';
-import FinancialStatements from './components/FinancialStatements';
-import BIDashboard from './components/BIDashboard';
-import MultiPeriodView from './components/MultiPeriodView';
-import PersonalFinanceView from './components/PersonalFinanceView';
-import MikroView from './components/MikroView';
-import InvestmentView from './components/InvestmentView';
-import BenchmarkView from './components/BenchmarkView';
+import { Check, User, Store, ShoppingBag, Moon, Sun } from 'lucide-react';
+import { useApp } from './context/useApp';
 import { buildPeriods, computeForecast } from './utils/multiPeriodEngine';
+
+// Keep the landing page fast. Analysis modules load only when the workspace is used.
+const FileUpload = lazy(() => import('./components/FileUpload'));
+const ConfidenceReview = lazy(() => import('./components/ConfidenceReview'));
+const FinancialStatements = lazy(() => import('./components/FinancialStatements'));
+const BIDashboard = lazy(() => import('./components/BIDashboard'));
+const MultiPeriodView = lazy(() => import('./components/MultiPeriodView'));
+const PersonalFinanceView = lazy(() => import('./components/PersonalFinanceView'));
+const MikroView = lazy(() => import('./components/MikroView'));
+const InvestmentView = lazy(() => import('./components/InvestmentView'));
+const BenchmarkView = lazy(() => import('./components/BenchmarkView'));
 
 // ─── Mode Toggle ──────────────────────────────────────────────────────────────
 
@@ -269,6 +271,7 @@ function App() {
         </div>
       </header>
 
+      <Suspense fallback={<main><div className="card page-fade">Memuat modul analisis...</div></main>}>
       <main>
         {/* ── Stepper ───────────────────────────────────────────────── */}
         <div className="stepper-container">
@@ -408,6 +411,7 @@ function App() {
           </div>
         )}
       </main>
+      </Suspense>
     </div>
   );
 }

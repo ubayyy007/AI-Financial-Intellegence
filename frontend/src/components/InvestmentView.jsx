@@ -9,7 +9,7 @@ const fmt = (n) =>
 
 // ─── Dimension Bar ────────────────────────────────────────────────────────────
 
-const DimBar = ({ name, score, max, detail, color }) => {
+const DimBar = ({ name, score, max, detail }) => {
   const pct = (score / max) * 100;
   const barColor = pct >= 80 ? '#22c55e' : pct >= 56 ? '#60a5fa' : pct >= 40 ? '#f59e0b' : '#f87171';
   return (

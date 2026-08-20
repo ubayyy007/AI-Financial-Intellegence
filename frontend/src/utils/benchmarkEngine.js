@@ -70,8 +70,6 @@ const deltaText = (userVal, benchVal, higherIsBetter, unit = '%') => {
   if (diffPct < 5) return 'setara dengan rata-rata sektor';
 
   const direction = diff > 0 ? 'lebih tinggi' : 'lebih rendah';
-  const sentiment = (diff > 0) === higherIsBetter ? 'positif' : 'negatif';
-
   const magnitude = diffPct >= 30 ? 'jauh' : diffPct >= 15 ? 'cukup' : 'sedikit';
 
   if (unit === 'pct') {

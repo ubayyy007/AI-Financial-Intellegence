@@ -74,8 +74,6 @@ const DayTooltip = ({ active, payload, label }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const DAYS_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
 export default function MikroView({ transactions }) {
   const data = useMemo(() => analyzeMikro(transactions), [transactions]);
 
@@ -84,7 +82,6 @@ export default function MikroView({ transactions }) {
     busiestDay, busiestDayIdx,
     dayChart,
     topEarners,
-    bestMargin,
     dailyData,
     restockDay, restockCount,
     tips,

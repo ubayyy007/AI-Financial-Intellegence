@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
 import { generateStatements, generatePersonalStatements } from '../utils/financialEngine';
 import { DownloadCloud, FileText, Check } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
-import * as XLSX from 'xlsx';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/useApp';
 
 export default function FinancialStatements({ parsedData, mode = 'business', openingBalance = 0 }) {
   const { t } = useApp();
@@ -19,12 +17,14 @@ export default function FinancialStatements({ parsedData, mode = 'business', ope
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     setIsExporting(true);
-    const element = reportRef.current;
-    
-    // Set a slight delay to allow UI to update (if we had specific PDF styles)
-    setTimeout(() => {
+    try {
+      const { default: html2pdf } = await import('html2pdf.js');
+      const element = reportRef.current;
+
+      // Set a slight delay to allow UI to update before rendering the PDF.
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const opt = {
         margin:       0.5,
         filename:     'Laporan_Keuangan.pdf',
@@ -33,13 +33,14 @@ export default function FinancialStatements({ parsedData, mode = 'business', ope
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
       
-      html2pdf().set(opt).from(element).save().then(() => {
-        setIsExporting(false);
-      });
-    }, 100);
+      await html2pdf().set(opt).from(element).save();
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await import('xlsx');
     // Buat worksheet untuk masing-masing laporan
     const { incomeStatement, balanceSheet, cashFlowStatement } = statements;
 

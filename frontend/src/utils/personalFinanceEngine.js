@@ -1,11 +1,5 @@
 // ─── Keyword Lists ─────────────────────────────────────────────────────────────
 
-const INCOME_KW = [
-  'gaji', 'salary', 'penghasilan', 'pendapatan', 'pemasukan', 'freelance',
-  'honor', 'bonus', 'thr', 'tunjangan', 'penjualan', 'usaha', 'bisnis',
-  'pasif', 'dividen', 'bunga', 'hadiah', 'kiriman', 'transfer masuk', 'masuk',
-];
-
 const NEEDS_KW = [
   'makan', 'makanan', 'sembako', 'beras', 'sayur', 'lauk', 'dapur', 'bahan makanan',
   'transport', 'ojek', 'gojek', 'grab', 'bensin', 'bahan bakar', 'bbm', 'parkir', 'tol',

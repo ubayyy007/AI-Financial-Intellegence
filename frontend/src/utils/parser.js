@@ -1,6 +1,11 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { parsePDFWithAI, parseTextWithAI } from './pdfParser';
+
+let xlsxPromise;
+const loadXLSX = () => {
+  if (!xlsxPromise) xlsxPromise = import('xlsx');
+  return xlsxPromise;
+};
 
 // ─── Number Parsing ───────────────────────────────────────────────────────────
 // Handles: Indonesian format (1.500.000 or 1.500.000,50), US format (1,500,000.50),
@@ -92,7 +97,7 @@ const parseDate = (val) => {
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
 
   // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
-  const dmyMatch = s.match(/^(\d{1,2})[\/\-.–](\d{1,2})[\/\-.–](\d{4})/);
+  const dmyMatch = s.match(new RegExp('^(\\d{1,2})[-/.–](\\d{1,2})[-/.–](\\d{4})'));
   if (dmyMatch) {
     const [, d, m, y] = dmyMatch;
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
@@ -134,7 +139,7 @@ const HEADER_KEYWORDS = [
   'saldo', 'balance', 'tipe', 'type', 'jenis', 'no', 'nomor',
 ];
 
-const findHeaderRow = (sheet, range) => {
+const findHeaderRow = (sheet, range, XLSX) => {
   const maxScan = Math.min(range.e.r, 25);
   let bestRow = range.s.r;
   let bestScore = -1;
@@ -367,10 +372,10 @@ const dateFromSheetName = (name) => {
 
 const SKIP_SHEET_NAMES = ['cover','petunjuk','panduan','info','summary','guide','readme'];
 
-const parseSheetTransactions = (sheet, sheetName) => {
+const parseSheetTransactions = (sheet, sheetName, XLSX) => {
   if (!sheet['!ref']) return [];
   const range = XLSX.utils.decode_range(sheet['!ref']);
-  const headerRow = findHeaderRow(sheet, range);
+  const headerRow = findHeaderRow(sheet, range, XLSX);
 
   const headers = [];
   for (let c = range.s.c; c <= range.e.c; c++) {
@@ -417,7 +422,7 @@ const parseSheetTransactions = (sheet, sheetName) => {
 
 // ─── Excel Parser — reads ALL data sheets ──────────────────────────────────────
 
-const parseExcelSmart = (workbook) => {
+const parseExcelSmart = (workbook, XLSX) => {
   const allTransactions = [];
   const sheetsRead = []; // { name, count } per sheet that yielded transactions
 
@@ -427,7 +432,7 @@ const parseExcelSmart = (workbook) => {
 
     const sheet = workbook.Sheets[sheetName];
     try {
-      const txs = parseSheetTransactions(sheet, sheetName);
+      const txs = parseSheetTransactions(sheet, sheetName, XLSX);
       if (txs.length > 0) {
         allTransactions.push(...txs);
         sheetsRead.push({ name: sheetName, count: txs.length });
@@ -557,11 +562,12 @@ export const parseFile = async (file, options = {}) => {
 
   // ── Excel ────────────────────────────────────────────────────────────────────
   if (ext === 'xlsx' || ext === 'xls') {
+    const XLSX = await loadXLSX();
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
 
     try {
-      const { transactions, sheetsRead } = parseExcelSmart(workbook);
+      const { transactions, sheetsRead } = parseExcelSmart(workbook, XLSX);
       if (transactions.length > 0) {
         return {
           transactions,

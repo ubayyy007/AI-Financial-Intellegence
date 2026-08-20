@@ -6,7 +6,7 @@ import {
   downloadDemoPersonal, downloadDemoWarung, downloadDemoUMKM,
   generateDemoPersonalFile, generateDemoWarungFile, generateDemoUMKMFile,
 } from '../utils/templateGenerator';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/useApp';
 
 const DEMO_KEYS = ['personal', 'warung', 'umkm'];
 const DEMO_FNS      = { personal: downloadDemoPersonal,    warung: downloadDemoWarung,    umkm: downloadDemoUMKM };
