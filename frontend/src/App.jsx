@@ -158,7 +158,10 @@ function App() {
   };
 
   // ── Upload handlers ────────────────────────────────────────────────────────
-  const handleDataParsed = (result) => setExtractionResult(result);
+  const handleDataParsed = (result) => {
+    if (typeof result?.openingBalance === 'number') setOpeningBalance(result.openingBalance);
+    setExtractionResult(result);
+  };
 
   const handleConfirmExtraction = (reviewedResult = extractionResult) => {
     setParsedData(reviewedResult.transactions);

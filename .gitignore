@@ -27,3 +27,4 @@ Thumbs.db
 # Test files (keep out of repo)
 *.pdf
 dummy_data_test.csv
+outputs/

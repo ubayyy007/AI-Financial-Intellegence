@@ -1,6 +1,155 @@
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
+
+const COLORS = {
+  black: '000000',
+  white: 'FFFFFF',
+  slate: '1F2937',
+  border: 'D1D5DB',
+};
+
+const BORDER = {
+  top: { style: 'thin', color: { rgb: COLORS.border } },
+  bottom: { style: 'thin', color: { rgb: COLORS.border } },
+  left: { style: 'thin', color: { rgb: COLORS.border } },
+  right: { style: 'thin', color: { rgb: COLORS.border } },
+};
+
+const HEADER_STYLE = {
+  fill: { patternType: 'solid', fgColor: { rgb: COLORS.black } },
+  font: { name: 'Aptos', sz: 11, bold: true, color: { rgb: COLORS.white } },
+  alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+  border: BORDER,
+};
+
+const BODY_STYLE = {
+  fill: { patternType: 'solid', fgColor: { rgb: COLORS.white } },
+  font: { name: 'Aptos', sz: 10, color: { rgb: COLORS.black } },
+  alignment: { vertical: 'center' },
+  border: BORDER,
+};
+
+const MARKER_STYLE = {
+  fill: { patternType: 'solid', fgColor: { rgb: COLORS.slate } },
+  font: { name: 'Aptos', sz: 10, bold: true, color: { rgb: COLORS.white } },
+  alignment: { vertical: 'center', wrapText: true },
+  border: BORDER,
+};
+
+const GUIDE_TITLE_STYLE = {
+  fill: { patternType: 'solid', fgColor: { rgb: COLORS.black } },
+  font: { name: 'Aptos Display', sz: 14, bold: true, color: { rgb: COLORS.white } },
+  alignment: { vertical: 'center', wrapText: true },
+  border: BORDER,
+};
+
+const GUIDE_SECTION_STYLE = {
+  fill: { patternType: 'solid', fgColor: { rgb: COLORS.slate } },
+  font: { name: 'Aptos', sz: 11, bold: true, color: { rgb: COLORS.white } },
+  alignment: { vertical: 'center', wrapText: true },
+  border: BORDER,
+};
+
+const cellAt = (ws, row, col) => ws[XLSX.utils.encode_cell({ r: row - 1, c: col - 1 })];
+
+const styleRow = (ws, row, style, columnCount = 5) => {
+  for (let col = 1; col <= columnCount; col += 1) {
+    const ref = XLSX.utils.encode_cell({ r: row - 1, c: col - 1 });
+    if (!ws[ref]) ws[ref] = { t: 's', v: '' };
+    ws[ref].s = style;
+  }
+};
+
+const styleLedgerSheet = (ws, { headerRow, endRow, widths, markerRows = [] }) => {
+  ws['!cols'] = widths;
+  ws['!freeze'] = { xSplit: 0, ySplit: headerRow };
+  ws['!autofilter'] = { ref: `A${headerRow}:E${endRow}` };
+  ws['!rows'] = ws['!rows'] || [];
+  ws['!rows'][headerRow - 1] = { hpt: 28 };
+
+  for (let row = headerRow; row <= endRow; row += 1) {
+    for (let col = 1; col <= 5; col += 1) {
+      const cell = cellAt(ws, row, col);
+      if (!cell) continue;
+      cell.s = { ...BODY_STYLE };
+      if (col === 3 || col === 4) {
+        cell.z = '#,##0;[Red]-#,##0';
+        cell.s = { ...cell.s, alignment: { ...BODY_STYLE.alignment, horizontal: 'right' } };
+      }
+    }
+  }
+
+  styleRow(ws, headerRow, HEADER_STYLE);
+  markerRows.forEach((row) => styleRow(ws, row, MARKER_STYLE));
+};
+
+const styleGuideSheet = (ws, { titleRows = [1], sectionRows = [] } = {}) => {
+  ws['!cols'] = [{ wch: 26 }, { wch: 72 }];
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  titleRows.forEach((row) => styleRow(ws, row, GUIDE_TITLE_STYLE, 2));
+  sectionRows.forEach((row) => styleRow(ws, row, GUIDE_SECTION_STYLE, 2));
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let row = range.s.r + 1; row <= range.e.r + 1; row += 1) {
+    for (let col = 1; col <= 2; col += 1) {
+      const cell = cellAt(ws, row, col);
+      if (cell && !titleRows.includes(row) && !sectionRows.includes(row)) {
+        cell.s = { ...BODY_STYLE, alignment: { ...BODY_STYLE.alignment, wrapText: true } };
+      }
+    }
+  }
+};
+
+const buildGuideSheet = (kind) => {
+  const isUmkm = kind === 'umkm';
+  const guideData = [
+    [isUmkm ? 'PANDUAN TEMPLATE UMKM / BISNIS' : 'PANDUAN TEMPLATE PERSONAL FINANCE', ''],
+    ['', ''],
+    ['CARA PAKAI', ''],
+    ['1. Isi saldo kas awal', 'Isi nominal kas yang sudah tersedia sebelum transaksi pertama pada baris >> SALDO AWAL BULAN <<, kolom C.'],
+    ['2. Isi transaksi', 'Satu baris untuk satu transaksi. Isi tanggal, keterangan, salah satu kolom nominal, dan kategori.'],
+    ['3. Simpan dan upload', 'Jangan menghapus nama kolom. Simpan file Excel ini lalu upload ke AI Financial Intelligence.'],
+    ['', ''],
+    ['FORMAT KOLOM', ''],
+    ['Tanggal', 'Gunakan format DD/MM/YYYY, contoh 15/08/2026.'],
+    ['Keterangan', 'Tulis deskripsi singkat dan jelas, misalnya Bayar listrik atau Penjualan produk.'],
+    ['Uang Masuk (Rp)', 'Isi pemasukan/kas masuk. Kosongkan jika transaksi adalah pengeluaran.'],
+    ['Uang Keluar (Rp)', 'Isi pengeluaran/kas keluar. Kosongkan jika transaksi adalah pemasukan.'],
+    ['Kategori', isUmkm ? 'Gunakan kategori usaha agar omzet, HPP, biaya, aset, piutang, dan utang bisa ditinjau.' : 'Gunakan kategori yang paling sesuai. Jika ragu, tulis keterangan lengkap untuk ditinjau manual.'],
+    ['', ''],
+    ['SALDO KAS', ''],
+    ['>> SALDO AWAL BULAN <<', 'Isi angka pada kolom C. Ini adalah kas sebelum periode dimulai, bukan pendapatan dan tidak masuk Laba Rugi.'],
+    ['>> SALDO AKHIR <<', 'Dihitung otomatis oleh formula dari Saldo Awal + Uang Masuk - Uang Keluar. Jangan diisi manual.'],
+    ['', ''],
+    [isUmkm ? 'KATEGORI UMKM YANG DISARANKAN' : 'KATEGORI PERSONAL YANG DISARANKAN', ''],
+    ...(isUmkm
+      ? [
+          ['Pendapatan', 'Penjualan produk/jasa yang sudah diterima kas.'],
+          ['Bahan Baku', 'Pembelian bahan untuk produksi; dipakai dalam analisis HPP.'],
+          ['Operasional', 'Listrik, air, sewa, ongkir, bahan bakar, dan biaya usaha rutin.'],
+          ['Pemasaran', 'Iklan, promosi, endorse, foto produk, dan materi pemasaran.'],
+          ['Aset Tetap', 'Peralatan, kendaraan, mesin, atau aset usaha jangka panjang.'],
+          ['Piutang Usaha', 'Penjualan yang belum dibayar pelanggan; perlu tanggal jatuh tempo/review manual.'],
+          ['Utang Usaha / Utang Bank', 'Kewajiban kepada pemasok atau pinjaman yang belum dilunasi.'],
+        ]
+      : [
+          ['Gaji / Penghasilan Lain', 'Pemasukan dari pekerjaan, freelance, bonus, atau sumber lain.'],
+          ['Makan & Minum / Belanja', 'Pengeluaran konsumsi dan kebutuhan rumah tangga.'],
+          ['Tagihan / Transport / Kesehatan', 'Pengeluaran rutin sesuai jenisnya.'],
+          ['Piutang', 'Uang yang dipinjamkan atau masih harus diterima; tambahkan jatuh tempo bila diketahui.'],
+          ['Utang / Cicilan', 'Kewajiban atau cicilan yang masih harus dibayar.'],
+        ]),
+    ['', ''],
+    ['CATATAN UNTUK SISTEM', ''],
+    ['Sheet yang dibaca', 'Sistem membaca sheet Jurnal Harian. Sheet Panduan hanya untuk petunjuk dan tidak dihitung sebagai transaksi.'],
+    ['Saldo awal', 'Baris saldo awal/akhir tidak dihitung sebagai transaksi. Nilai saldo awal dibaca sebagai Kas Awal jika diisi pada kolom C.'],
+    ['Review manual', 'Klasifikasi hutang, piutang, aset, dan transaksi kredit dapat memerlukan konfirmasi pengguna.'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(guideData);
+  styleGuideSheet(ws, { sectionRows: [3, 8, 15, 19, 27] });
+  return ws;
+};
 
 const fmtDate = (y, m, d) =>
   `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
@@ -53,7 +202,7 @@ const buildPersonalWorkbook = () => {
     const dataStart = 4;
     const dataEnd   = dataStart + numRows - 1;
     const allRows = [
-      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 0, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
+      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 2500000, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
       ['', '', '', '', ''],
       ...rows,
       ['', '', '', '', ''],
@@ -62,9 +211,16 @@ const buildPersonalWorkbook = () => {
         '', ''],
     ];
     const ws = XLSX.utils.aoa_to_sheet(allRows);
-    ws['!cols'] = [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
+    styleLedgerSheet(ws, {
+      headerRow: 3,
+      endRow: allRows.length,
+      widths: [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 22 }],
+      markerRows: [1, allRows.length],
+    });
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
+
+  XLSX.utils.book_append_sheet(wb, buildGuideSheet('personal'), 'Panduan');
 
   return wb;
 };
@@ -132,7 +288,7 @@ const buildWarungWorkbook = () => {
     const dataStart = 4;
     const dataEnd   = dataStart + numRows - 1;
     const allRows = [
-      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 0, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
+      ['>> SALDO AWAL BULAN <<', '<-- OPSIONAL: isi nominal kas awal di kolom "Uang Masuk" (kolom C) di baris ini -->', 3500000, '', 'Bukan pemasukan — ini posisi kas Anda SEBELUM transaksi bulan ini. Kosongkan jika tidak tahu.'],
       ['', '', '', '', ''],
       ...rows,
       ['', '', '', '', ''],
@@ -141,9 +297,16 @@ const buildWarungWorkbook = () => {
         '', ''],
     ];
     const ws = XLSX.utils.aoa_to_sheet(allRows);
-    ws['!cols'] = [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
+    styleLedgerSheet(ws, {
+      headerRow: 3,
+      endRow: allRows.length,
+      widths: [{ wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 18 }, { wch: 15 }],
+      markerRows: [1, allRows.length],
+    });
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
+
+  XLSX.utils.book_append_sheet(wb, buildGuideSheet('umkm'), 'Panduan');
 
   return wb;
 };
@@ -201,10 +364,30 @@ const buildUMKMWorkbook = () => {
       [fmtDate(y,m,28), 'Biaya pengurusan izin PIRT',         '',           350000,    'Administrasi'],
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 14 }, { wch: 42 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
+    const dataRows = rows.slice(1);
+    const dataStart = 4;
+    const dataEnd = dataStart + dataRows.length - 1;
+    const allRows = [
+      ['>> SALDO AWAL BULAN <<', 'Isi kas awal periode pada kolom Uang Masuk (Rp).', 3500000, '', 'Bukan pendapatan — hanya posisi kas sebelum transaksi.'],
+      ['', '', '', '', ''],
+      rows[0],
+      ...dataRows,
+      ['', '', '', '', ''],
+      ['>> SALDO AKHIR <<', 'Dihitung otomatis: Saldo Awal + Total Masuk - Total Keluar',
+        { f: `C1+SUMIF(C${dataStart}:C${dataEnd},"<>",C${dataStart}:C${dataEnd})-SUMIF(D${dataStart}:D${dataEnd},"<>",D${dataStart}:D${dataEnd})` },
+        '', ''],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
+    styleLedgerSheet(ws, {
+      headerRow: 3,
+      endRow: allRows.length,
+      widths: [{ wch: 14 }, { wch: 42 }, { wch: 18 }, { wch: 18 }, { wch: 15 }],
+      markerRows: [1, allRows.length],
+    });
     XLSX.utils.book_append_sheet(wb, ws, label);
   }
+
+  XLSX.utils.book_append_sheet(wb, buildGuideSheet('umkm'), 'Panduan');
 
   return wb;
 };
@@ -228,8 +411,6 @@ const dateOffset = (days) => {
 };
 
 const COL_WIDTHS = [{ wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
-
-const applyWidths = (ws) => { ws['!cols'] = COL_WIDTHS; };
 
 const writeFile = (wb, fileName) => XLSX.writeFile(wb, fileName);
 
@@ -275,49 +456,16 @@ export const downloadPersonalTemplate = () => {
   ];
 
   const wsJournal = XLSX.utils.aoa_to_sheet(journalWithBalance);
-  applyWidths(wsJournal);
+  styleLedgerSheet(wsJournal, {
+    headerRow: 3,
+    endRow: journalWithBalance.length,
+    widths: COL_WIDTHS,
+    markerRows: [1, journalWithBalance.length],
+  });
   XLSX.utils.book_append_sheet(wb, wsJournal, 'Jurnal Harian');
 
-  // ── Sheet 2: Panduan Kategori ─────────────────────────────────────────────
-  const guideData = [
-    ['PANDUAN PENGISIAN TEMPLATE PERSONAL FINANCE'],
-    [],
-    ['FORMAT KOLOM:'],
-    ['Tanggal',           'Format DD/MM/YYYY  →  contoh: 15/08/2025'],
-    ['Keterangan',        'Isi bebas — deskripsi singkat transaksi'],
-    ['Uang Masuk (Rp)',   'Isi nominal TANPA titik/koma jika angka, atau tulis biasa misal: 500000'],
-    ['Uang Keluar (Rp)',  'Isi nominal pengeluaran. Kosongkan jika itu pemasukan'],
-    ['Kategori',          'Pilih dari daftar di bawah, atau tulis kategori sendiri'],
-    [],
-    ['DAFTAR KATEGORI YANG DISARANKAN:'],
-    [],
-    ['Uang Masuk:',       ''],
-    ['',  'Gaji'],
-    ['',  'Penghasilan Lain'],
-    ['',  'Freelance / Usaha Sampingan'],
-    ['',  'Transfer Masuk'],
-    ['',  'Hadiah / Bonus'],
-    [],
-    ['Uang Keluar:',      ''],
-    ['',  'Makan & Minum'],
-    ['',  'Transport'],
-    ['',  'Belanja'],
-    ['',  'Tagihan        (listrik, air, internet, dll)'],
-    ['',  'Kesehatan      (obat, dokter, dll)'],
-    ['',  'Pendidikan     (kursus, buku, dll)'],
-    ['',  'Hiburan        (streaming, nonton, dll)'],
-    ['',  'Tabungan / Investasi'],
-    ['',  'Lain-lain'],
-    [],
-    ['TIPS:'],
-    ['',  '→  Isi satu baris per transaksi'],
-    ['',  '→  Kosongkan kolom yang tidak berlaku (jangan tulis 0)'],
-    ['',  '→  Kolom Kategori bebas diisi sesuai kebutuhan Anda'],
-    ['',  '→  File ini bisa langsung diupload ke AI Financial Intelligence'],
-  ];
-
-  const wsGuide = XLSX.utils.aoa_to_sheet(guideData);
-  wsGuide['!cols'] = [{ wch: 24 }, { wch: 55 }];
+  // ── Sheet 2: Panduan pengisian ────────────────────────────────────────────
+  const wsGuide = buildGuideSheet('personal');
   XLSX.utils.book_append_sheet(wb, wsGuide, 'Panduan');
 
   writeFile(wb, 'Template_Personal_Finance.xlsx');
@@ -368,54 +516,16 @@ export const downloadUMKMTemplate = () => {
   ];
 
   const wsJournal = XLSX.utils.aoa_to_sheet(journalWithBalance);
-  applyWidths(wsJournal);
+  styleLedgerSheet(wsJournal, {
+    headerRow: 3,
+    endRow: journalWithBalance.length,
+    widths: COL_WIDTHS,
+    markerRows: [1, journalWithBalance.length],
+  });
   XLSX.utils.book_append_sheet(wb, wsJournal, 'Jurnal Harian');
 
-  // ── Sheet 2: Panduan Kategori ─────────────────────────────────────────────
-  const guideData = [
-    ['PANDUAN PENGISIAN TEMPLATE UMKM / BISNIS'],
-    [],
-    ['FORMAT KOLOM:'],
-    ['Tanggal',           'Format DD/MM/YYYY  →  contoh: 15/08/2025'],
-    ['Keterangan',        'Isi bebas — deskripsi singkat transaksi'],
-    ['Uang Masuk (Rp)',   'Nominal pemasukan (pendapatan, penerimaan). Kosongkan jika pengeluaran'],
-    ['Uang Keluar (Rp)',  'Nominal pengeluaran. Kosongkan jika pemasukan'],
-    ['Kategori',          'WAJIB DIISI — menentukan cara hitung Laba Rugi. Lihat daftar di bawah'],
-    [],
-    ['DAFTAR KATEGORI STANDAR UMKM:'],
-    [],
-    ['Uang Masuk:',       ''],
-    ['',  'Pendapatan      → hasil penjualan produk / jasa (WAJIB pakai kategori ini untuk omzet)'],
-    ['',  'Pendapatan Lain → pendapatan di luar usaha utama (mis: sewa aset, bunga)'],
-    [],
-    ['Uang Keluar:',      ''],
-    ['',  'Bahan Baku      → pembelian bahan untuk produksi (masuk HPP / COGS)'],
-    ['',  'Gaji            → upah karyawan / tenaga kerja'],
-    ['',  'Operasional     → listrik, air, sewa, ongkos kirim, bahan bakar, dll'],
-    ['',  'Pemasaran       → iklan, promosi, biaya endorse, cetak brosur, dll'],
-    ['',  'Administrasi    → biaya bank, ATK, perizinan, dll'],
-    ['',  'Modal           → setoran modal pemilik (bukan biaya, masuk ekuitas)'],
-    ['',  'Utang           → pinjaman yang diterima (masuk liabilitas)'],
-    ['',  'Lain-lain       → pengeluaran yang tidak termasuk kategori di atas'],
-    [],
-    ['CARA KERJA KALKULASI LABA RUGI:'],
-    ['',  'Pendapatan'],
-    ['',  '   dikurangi  Bahan Baku (HPP)'],
-    ['',  '   ─────────────────────────'],
-    ['',  '   = Laba Kotor'],
-    ['',  '   dikurangi  Gaji + Operasional + Pemasaran + Administrasi + Lain-lain'],
-    ['',  '   ─────────────────────────'],
-    ['',  '   = Laba Bersih'],
-    [],
-    ['TIPS:'],
-    ['',  '→  Isi satu baris per transaksi, satu bulan per file atau per sheet'],
-    ['',  '→  Pisahkan bahan baku dan biaya operasional agar HPP lebih akurat'],
-    ['',  '→  Kosongkan kolom yang tidak berlaku (jangan tulis 0)'],
-    ['',  '→  File ini bisa langsung diupload ke AI Financial Intelligence'],
-  ];
-
-  const wsGuide = XLSX.utils.aoa_to_sheet(guideData);
-  wsGuide['!cols'] = [{ wch: 20 }, { wch: 65 }];
+  // ── Sheet 2: Panduan pengisian ────────────────────────────────────────────
+  const wsGuide = buildGuideSheet('umkm');
   XLSX.utils.book_append_sheet(wb, wsGuide, 'Panduan');
 
   writeFile(wb, 'Template_UMKM_Bisnis.xlsx');

@@ -372,6 +372,39 @@ const dateFromSheetName = (name) => {
 
 const SKIP_SHEET_NAMES = ['cover','petunjuk','panduan','info','summary','guide','readme'];
 
+const OPENING_BALANCE_PATTERN = /saldo\s*awal|opening\s+balance|beginning\s+balance/i;
+
+const extractOpeningBalance = (sheet, range, headerRow, colMap, XLSX) => {
+  for (let r = range.s.r; r <= range.e.r; r += 1) {
+    if (r === headerRow) continue;
+
+    const values = [];
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+      values.push(cell ? cell.v : '');
+    }
+
+    const rowText = values
+      .filter((value) => value !== null && value !== undefined && value !== '')
+      .map((value) => value.toString())
+      .join(' ');
+
+    if (!OPENING_BALANCE_PATTERN.test(rowText)) continue;
+
+    // Template convention: saldo awal kas is entered in Uang Masuk (Rp).
+    // Fall back to a generic nominal column for compatible user files.
+    const candidateIndexes = [colMap.debit, colMap.amount, colMap.credit]
+      .filter((index, position, indexes) => index !== undefined && indexes.indexOf(index) === position);
+    const amount = candidateIndexes
+      .map((index) => parseNumber(values[index]))
+      .find((value) => value !== 0) ?? 0;
+
+    return Math.max(0, amount);
+  }
+
+  return null;
+};
+
 const parseSheetTransactions = (sheet, sheetName, XLSX) => {
   if (!sheet['!ref']) return [];
   const range = XLSX.utils.decode_range(sheet['!ref']);
@@ -390,6 +423,8 @@ const parseSheetTransactions = (sheet, sheetName, XLSX) => {
     colMap.credit !== undefined;
 
   if (!hasValueCols) return []; // skip silently — caller handles the error
+
+  const openingBalance = extractOpeningBalance(sheet, range, headerRow, colMap, XLSX);
 
   const fallbackDate = dateFromSheetName(sheetName);
   const results = [];
@@ -417,7 +452,7 @@ const parseSheetTransactions = (sheet, sheetName, XLSX) => {
     }
   }
 
-  return results;
+  return { transactions: results, openingBalance };
 };
 
 // ─── Excel Parser — reads ALL data sheets ──────────────────────────────────────
@@ -425,6 +460,7 @@ const parseSheetTransactions = (sheet, sheetName, XLSX) => {
 const parseExcelSmart = (workbook, XLSX) => {
   const allTransactions = [];
   const sheetsRead = []; // { name, count } per sheet that yielded transactions
+  const openingBalances = [];
 
   for (const sheetName of workbook.SheetNames) {
     const nameLower = sheetName.toLowerCase();
@@ -432,10 +468,12 @@ const parseExcelSmart = (workbook, XLSX) => {
 
     const sheet = workbook.Sheets[sheetName];
     try {
-      const txs = parseSheetTransactions(sheet, sheetName, XLSX);
-      if (txs.length > 0) {
-        allTransactions.push(...txs);
-        sheetsRead.push({ name: sheetName, count: txs.length });
+      const parsedSheet = parseSheetTransactions(sheet, sheetName, XLSX);
+      if (Array.isArray(parsedSheet)) continue;
+      if (parsedSheet.openingBalance !== null) openingBalances.push(parsedSheet.openingBalance);
+      if (parsedSheet.transactions.length > 0) {
+        allTransactions.push(...parsedSheet.transactions);
+        sheetsRead.push({ name: sheetName, count: parsedSheet.transactions.length });
       }
     } catch { /* ignore unparseable sheets */ }
   }
@@ -447,7 +485,8 @@ const parseExcelSmart = (workbook, XLSX) => {
     );
   }
 
-  return { transactions: allTransactions, sheetsRead };
+  const firstKnownOpeningBalance = openingBalances.find((value) => value > 0) ?? openingBalances[0] ?? null;
+  return { transactions: allTransactions, sheetsRead, openingBalance: firstKnownOpeningBalance };
 };
 
 // ─── CSV Parser ────────────────────────────────────────────────────────────────
@@ -567,13 +606,15 @@ export const parseFile = async (file, options = {}) => {
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
 
     try {
-      const { transactions, sheetsRead } = parseExcelSmart(workbook, XLSX);
+      const { transactions, sheetsRead, openingBalance } = parseExcelSmart(workbook, XLSX);
       if (transactions.length > 0) {
-        return {
+        const result = {
           transactions,
           confidence: computeRuleBasedConfidence(transactions),
           meta: { sheetsRead },
         };
+        if (openingBalance !== null && openingBalance !== undefined) result.openingBalance = openingBalance;
+        return result;
       }
     } catch { /* lanjut ke AI */ }
 

@@ -140,6 +140,19 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
         </div>
       )}
 
+      {typeof result.openingBalance === 'number' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          padding: '0.7rem 1rem', marginBottom: '1rem',
+          background: 'rgba(34,197,94,0.08)',
+          border: '1px solid rgba(34,197,94,0.22)',
+          borderRadius: '8px', color: '#86efac', fontSize: '0.8125rem',
+        }}>
+          <CheckCircle size={14} />
+          Saldo awal kas terdeteksi: <strong>{formatCurrency(result.openingBalance)}</strong>. Nilai ini dipakai untuk Kas dan Arus Kas, bukan Laba Rugi.
+        </div>
+      )}
+
       {/* ── Warnings ──────────────────────────────────────────────── */}
       {warnings.length > 0 && (
         <div style={{
