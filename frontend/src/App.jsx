@@ -160,14 +160,14 @@ function App() {
   // ── Upload handlers ────────────────────────────────────────────────────────
   const handleDataParsed = (result) => setExtractionResult(result);
 
-  const handleConfirmExtraction = () => {
-    setParsedData(extractionResult.transactions);
+  const handleConfirmExtraction = (reviewedResult = extractionResult) => {
+    setParsedData(reviewedResult.transactions);
     setExtractionResult(null);
     setActiveMainTab(mode === 'business' ? 'statements' : 'report');
   };
 
-  const handleMergeExtraction = () => {
-    setParsedData((prev) => [...prev, ...extractionResult.transactions]);
+  const handleMergeExtraction = (reviewedResult = extractionResult) => {
+    setParsedData((prev) => [...prev, ...reviewedResult.transactions]);
     setExtractionResult(null);
     setActiveMainTab('multi');
   };

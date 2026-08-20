@@ -1,5 +1,7 @@
-import { AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Bot, Cpu, PlusCircle, Layers } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Bot, Cpu, PlusCircle, Layers, Info } from 'lucide-react';
 import { useApp } from '../context/useApp';
+import { ACCOUNT_TYPES, PAYMENT_STATUSES, classifyTransactions } from '../utils/accountingClassifier';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -13,12 +15,27 @@ const LEVEL_CONFIG = {
 export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, hasPreviousData }) {
   const { t } = useApp();
   const { transactions, confidence, meta } = result;
+  const [reviewedTransactions, setReviewedTransactions] = useState(() => classifyTransactions(transactions));
   const sheetsRead = meta?.sheetsRead ?? [];
   const { score, level, method, warnings, flaggedIds } = confidence;
   const cfg = LEVEL_CONFIG[level] || LEVEL_CONFIG.medium;
   const flaggedSet = new Set(flaggedIds);
   const flaggedCount = flaggedIds.length;
-  const preview = transactions.slice(0, 80);
+  const preview = reviewedTransactions.slice(0, 80);
+  const uncertainCount = reviewedTransactions.filter((row) => row.accountType === 'uncertain').length;
+
+  useEffect(() => {
+    setReviewedTransactions(classifyTransactions(transactions));
+  }, [transactions]);
+
+  const updateTransaction = (id, patch) => {
+    setReviewedTransactions((current) => current.map((row) => (
+      row.id === id ? { ...row, ...patch, classificationSource: 'manual' } : row
+    )));
+  };
+
+  const confirmReviewed = () => onConfirm({ ...result, transactions: reviewedTransactions });
+  const mergeReviewed = () => onMerge?.({ ...result, transactions: reviewedTransactions });
 
   return (
     <div className="card">
@@ -144,6 +161,28 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
         </div>
       )}
 
+      {/* ── Accounting disclaimer ─────────────────────────────────── */}
+      <div style={{
+        display: 'flex', gap: '0.625rem', alignItems: 'flex-start',
+        padding: '0.75rem 1rem', marginBottom: '1.25rem',
+        background: 'rgba(59,130,246,0.07)',
+        border: '1px solid rgba(59,130,246,0.22)', borderRadius: '8px',
+      }}>
+        <Info size={15} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Review akuntansi diperlukan.</strong>{' '}
+          Klasifikasi aset, utang, piutang, dan ekuitas adalah saran berdasarkan teks transaksi.
+          Jika kolom akun atau jatuh tempo tidak tersedia, isi atau koreksi secara manual sebelum mengonfirmasi.
+          Hasil ini bukan pengganti pemeriksaan akuntan profesional.
+        </div>
+      </div>
+
+      {uncertainCount > 0 && (
+        <div style={{ marginBottom: '0.75rem', fontSize: '0.75rem', color: '#f59e0b' }}>
+          {uncertainCount} transaksi belum dapat diklasifikasikan dengan yakin dan perlu ditinjau manual.
+        </div>
+      )}
+
       {/* ── Transaction Preview Table ─────────────────────────────── */}
       <div style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.625rem' }}>
@@ -166,6 +205,10 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
                 <th>{t('cr_col_cat')}</th>
                 <th>{t('cr_col_amount')}</th>
                 <th>{t('cr_col_type')}</th>
+                <th>Akun</th>
+                <th>Jatuh tempo</th>
+                <th>Status</th>
+                <th>Pihak terkait</th>
               </tr>
             </thead>
             <tbody>
@@ -186,6 +229,45 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
                       <span className={`badge ${row.type.toLowerCase() === 'kredit' ? 'badge-kredit' : 'badge-debit'}`}>
                         {row.type}
                       </span>
+                    </td>
+                    <td>
+                      <select
+                        value={row.accountType || 'uncertain'}
+                        onChange={(e) => updateTransaction(row.id, { accountType: e.target.value, classificationConfidence: 'manual' })}
+                        aria-label={`Klasifikasi akun untuk ${row.description}`}
+                        style={{ minWidth: 150, maxWidth: 180, padding: '0.3rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.7rem' }}
+                      >
+                        {ACCOUNT_TYPES.map((account) => <option key={account.value} value={account.value}>{account.label}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        value={row.dueDate || ''}
+                        onChange={(e) => updateTransaction(row.id, { dueDate: e.target.value })}
+                        aria-label={`Jatuh tempo untuk ${row.description}`}
+                        style={{ minWidth: 125, padding: '0.3rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.7rem' }}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={row.paymentStatus || 'unknown'}
+                        onChange={(e) => updateTransaction(row.id, { paymentStatus: e.target.value })}
+                        aria-label={`Status pembayaran untuk ${row.description}`}
+                        style={{ minWidth: 115, padding: '0.3rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.7rem' }}
+                      >
+                        {PAYMENT_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={row.counterparty || ''}
+                        onChange={(e) => updateTransaction(row.id, { counterparty: e.target.value })}
+                        placeholder="Pelanggan/vendor"
+                        aria-label={`Pihak terkait untuk ${row.description}`}
+                        style={{ minWidth: 135, padding: '0.3rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.7rem' }}
+                      />
                     </td>
                   </tr>
                 );
@@ -211,7 +293,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
           {hasPreviousData && onMerge && (
             <button
               className="btn btn-ghost"
-              onClick={onMerge}
+              onClick={mergeReviewed}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderColor: '#818cf8', color: '#818cf8' }}
             >
               <PlusCircle size={14} />
@@ -220,7 +302,7 @@ export default function ConfidenceReview({ result, onConfirm, onMerge, onReset, 
           )}
           <button
             className="btn btn-primary"
-            onClick={onConfirm}
+            onClick={confirmReviewed}
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             {hasPreviousData ? t('cr_btn_replace') : t('cr_btn_confirm')}

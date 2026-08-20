@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { generateStatements, generatePersonalStatements } from '../utils/financialEngine';
 import { DownloadCloud, FileText, Check } from 'lucide-react';
 import { useApp } from '../context/useApp';
+import { ACCOUNT_TYPES } from '../utils/accountingClassifier';
 
 export default function FinancialStatements({ parsedData, mode = 'business', openingBalance = 0 }) {
   const { t } = useApp();
@@ -16,6 +17,30 @@ export default function FinancialStatements({ parsedData, mode = 'business', ope
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
+
+  const accountingSummary = useMemo(() => {
+    const byType = new Map();
+    for (const transaction of parsedData) {
+      const type = transaction.accountType || 'uncertain';
+      const current = byType.get(type) || { count: 0, amount: 0 };
+      current.count += 1;
+      current.amount += transaction.amount || 0;
+      byType.set(type, current);
+    }
+
+    const receivables = parsedData.filter((transaction) => transaction.accountType === 'accounts_receivable');
+    const payables = parsedData.filter((transaction) => transaction.accountType === 'accounts_payable' || transaction.accountType === 'loan_payable');
+    const isOpen = (transaction) => ['open', 'partial', 'unknown'].includes(transaction.paymentStatus || 'unknown');
+    const isOverdue = (transaction) => transaction.dueDate && new Date(`${transaction.dueDate}T23:59:59`) < new Date();
+
+    return {
+      rows: [...byType.entries()]
+        .map(([type, value]) => ({ type, ...value, label: ACCOUNT_TYPES.find((item) => item.value === type)?.label || 'Perlu Ditinjau' }))
+        .sort((a, b) => b.amount - a.amount),
+      receivables: { count: receivables.length, amount: receivables.filter(isOpen).reduce((sum, item) => sum + item.amount, 0), overdue: receivables.filter(isOpen).filter(isOverdue).length },
+      payables: { count: payables.length, amount: payables.filter(isOpen).reduce((sum, item) => sum + item.amount, 0), overdue: payables.filter(isOpen).filter(isOverdue).length },
+    };
+  }, [parsedData]);
 
   const exportToPDF = async () => {
     setIsExporting(true);
@@ -113,6 +138,41 @@ export default function FinancialStatements({ parsedData, mode = 'business', ope
             {isExporting ? <Check size={15} /> : <DownloadCloud size={15} />}
             {isExporting ? t('fs_exporting') : t('fs_export_pdf')}
           </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.5rem', padding: '0.875rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'baseline', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Ringkasan akun terdeteksi</h3>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              Berdasarkan klasifikasi otomatis dan koreksi manual saat review data.
+            </p>
+          </div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{accountingSummary.rows.reduce((sum, row) => sum + row.count, 0)} transaksi</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          {[
+            ['Piutang terbuka', accountingSummary.receivables],
+            ['Utang terbuka', accountingSummary.payables],
+          ].map(([label, value]) => (
+            <div key={label} style={{ flex: '1 1 180px', padding: '0.625rem 0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{label}</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, marginTop: '0.15rem' }}>{formatCurrency(value.amount)}</div>
+              <div style={{ fontSize: '0.65rem', color: value.overdue > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                {value.count} transaksi{value.overdue > 0 ? ` · ${value.overdue} lewat jatuh tempo` : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+          {accountingSummary.rows.map((row) => (
+            <span key={row.type} style={{ padding: '0.25rem 0.5rem', borderRadius: '999px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.65rem' }}>
+              {row.label}: {formatCurrency(row.amount)}
+            </span>
+          ))}
         </div>
       </div>
 
